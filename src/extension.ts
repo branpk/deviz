@@ -1,3 +1,4 @@
+import { spawn } from "child_process";
 import * as vscode from "vscode";
 import { VirtualFileSystemProvider } from "./virtualFileSystem";
 import { VirtualTextContentProvider } from "./virtualTextContentProvider";
@@ -22,12 +23,38 @@ export function activate(context: vscode.ExtensionContext) {
       case "deviz-input-text":
         const inputText = event.document.getText();
 
-        const outputText = inputText + inputText;
+        if (!vscode.workspace.workspaceFolders) {
+          vscode.window.showErrorMessage("Deviz: Must have folder open");
+          break;
+        }
+        const workspacePath = vscode.workspace.workspaceFolders[0].uri.fsPath;
+        const command = "cargo run";
 
-        virtualTextContentProvider.setFileContent(
-          vscode.Uri.parse("deviz-output-text:/output"),
-          outputText
-        );
+        const process = spawn(command, { cwd: workspacePath, shell: true });
+
+        process.stdin.write(inputText);
+        process.stdin.end();
+
+        let stdout = "";
+        let numChunks = 0;
+        process.stdout.on("data", (chunk) => {
+          numChunks += 1;
+          stdout += chunk;
+        });
+
+        let stderr = "";
+        process.stderr.on("data", (chunk) => {
+          stderr += chunk;
+        });
+
+        process.on("close", (code) => {
+          console.log(`${command} exited with code ${code}`);
+
+          virtualTextContentProvider.setFileContent(
+            vscode.Uri.parse("deviz-output-text:/output"),
+            `stdout:\n${stdout}\nstderr:\n${stderr}\n`
+          );
+        });
         break;
 
       case "deviz-output-text":
