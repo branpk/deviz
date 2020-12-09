@@ -18,15 +18,25 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   vscode.workspace.onDidChangeTextDocument((event) => {
-    if (event.document.uri.scheme === "deviz-input-text") {
-      const inputText = event.document.getText();
+    switch (event.document.uri.scheme) {
+      case "deviz-input-text":
+        const inputText = event.document.getText();
 
-      const outputText = inputText + inputText;
+        const outputText = inputText + inputText;
 
-      virtualTextContentProvider.setFileContent(
-        vscode.Uri.parse("deviz-output-text:/output"),
-        outputText
-      );
+        virtualTextContentProvider.setFileContent(
+          vscode.Uri.parse("deviz-output-text:/output"),
+          outputText
+        );
+        break;
+
+      case "deviz-output-text":
+        for (const editor of vscode.window.visibleTextEditors) {
+          if (editor.document === event.document) {
+            editor.selection = new vscode.Selection(0, 0, 0, 0);
+          }
+        }
+        break;
     }
   });
 
@@ -43,6 +53,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.Uri.parse("deviz-output-text:/output"),
         {
           viewColumn: vscode.ViewColumn.Two,
+          preserveFocus: true,
           preview: false,
         }
       );
