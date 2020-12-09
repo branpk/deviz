@@ -1,27 +1,51 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
+import { VirtualFileSystemProvider } from "./virtualFileSystem";
+import { VirtualTextContentProvider } from "./virtualTextContentProvider";
 
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+  const virtualFileSystem = new VirtualFileSystemProvider();
+  const virtualTextContentProvider = new VirtualTextContentProvider();
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "deviz" is now active!');
+  context.subscriptions.push(
+    vscode.workspace.registerFileSystemProvider(
+      "deviz-input-text",
+      virtualFileSystem
+    ),
+    vscode.workspace.registerTextDocumentContentProvider(
+      "deviz-output-text",
+      virtualTextContentProvider
+    )
+  );
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('deviz.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
+  vscode.workspace.onDidChangeTextDocument((event) => {
+    if (event.document.uri.scheme === "deviz-input-text") {
+      const inputText = event.document.getText();
 
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from Deviz!');
-	});
+      const outputText = inputText + inputText;
 
-	context.subscriptions.push(disposable);
+      virtualTextContentProvider.setFileContent(
+        vscode.Uri.parse("deviz-output-text:/output"),
+        outputText
+      );
+    }
+  });
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("deviz.show", async () => {
+      await vscode.window.showTextDocument(
+        vscode.Uri.parse("deviz-input-text:/input"),
+        {
+          viewColumn: vscode.ViewColumn.Two,
+          preview: false,
+        }
+      );
+      await vscode.window.showTextDocument(
+        vscode.Uri.parse("deviz-output-text:/output"),
+        {
+          viewColumn: vscode.ViewColumn.Two,
+          preview: false,
+        }
+      );
+    })
+  );
 }
-
-// this method is called when your extension is deactivated
-export function deactivate() {}

@@ -10,14 +10,14 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:deviz.helloWorld"
+		"onCommand:deviz.show"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"commands": [
 			{
-				"command": "deviz.helloWorld",
-				"title": "Hello World"
+				"command": "deviz.show",
+				"title": "Deviz: Show"
 			}
 		]
 	},
