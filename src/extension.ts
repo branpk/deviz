@@ -1,33 +1,20 @@
 import { spawn } from "child_process";
 import * as vscode from "vscode";
+import { ViewTreeProvider } from "./viewTree";
 import { VirtualFileSystemProvider } from "./virtualFileSystem";
 import { VirtualTextContentProvider } from "./virtualTextContentProvider";
 
-class ViewTreeProvider implements vscode.TreeDataProvider<ViewTreeItem> {
-  getTreeItem(element: ViewTreeItem): vscode.TreeItem {
-    return element;
-  }
-
-  getChildren(element?: ViewTreeItem): vscode.ProviderResult<ViewTreeItem[]> {
-    if (element) {
-      return [];
-    } else {
-      return ["stdin", "stdout", "stderr"].map((id) => new ViewTreeItem(id));
-    }
-  }
-}
-
-class ViewTreeItem implements vscode.TreeItem {
-  label: string;
-  id: string;
-
-  constructor(id: string) {
-    this.label = id;
-    this.id = id;
-  }
-}
-
 export function activate(context: vscode.ExtensionContext) {
+  const stdinUri = vscode.Uri.parse("deviz-input-text:/stdin");
+  const stdoutUri = vscode.Uri.parse("deviz-output-text:/stdout");
+  const stderrUri = vscode.Uri.parse("deviz-output-text:/stderr");
+
+  const viewTreeProvider = new ViewTreeProvider();
+  viewTreeProvider.setViews([stdinUri, stdoutUri, stderrUri]);
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider("devizViews", viewTreeProvider)
+  );
+
   const virtualFileSystem = new VirtualFileSystemProvider();
   const virtualTextContentProvider = new VirtualTextContentProvider();
 
@@ -42,16 +29,12 @@ export function activate(context: vscode.ExtensionContext) {
     )
   );
 
-  const stdinUri = vscode.Uri.parse("deviz-input-text:/stdin");
-  const stdoutUri = vscode.Uri.parse("deviz-output-text:/stdout");
-  const stderrUri = vscode.Uri.parse("deviz-output-text:/stderr");
-
-  const refreshOutput = () => {
+  const refresh = () => {
     const inputDocument = vscode.workspace.textDocuments.find(
       (document) => document.uri.scheme === "deviz-input-text"
     );
     if (!inputDocument) {
-      vscode.window.showErrorMessage("Deviz: Must open input pane");
+      // TODO: Fetch from virtual file system
       return;
     }
     const inputText = inputDocument.getText();
@@ -96,7 +79,7 @@ export function activate(context: vscode.ExtensionContext) {
   vscode.workspace.onDidChangeTextDocument((event) => {
     switch (event.document.uri.scheme) {
       case "deviz-input-text":
-        refreshOutput();
+        refresh();
         break;
 
       case "deviz-output-text":
@@ -110,32 +93,27 @@ export function activate(context: vscode.ExtensionContext) {
   });
   vscode.workspace.onDidSaveTextDocument((event) => {
     if (!event.uri.scheme.startsWith("deviz-")) {
-      refreshOutput();
+      refresh();
     }
   });
 
   context.subscriptions.push(
-    vscode.window.registerTreeDataProvider("devizViews", new ViewTreeProvider())
+    vscode.commands.registerCommand("deviz.startSession", async () => {
+      refresh();
+    })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("deviz.startSession", async () => {
-      await vscode.window.showTextDocument(stdinUri, {
-        viewColumn: vscode.ViewColumn.Two,
-        preserveFocus: true,
-        preview: false,
-      });
-      await vscode.window.showTextDocument(stdoutUri, {
-        viewColumn: vscode.ViewColumn.Two,
-        preserveFocus: true,
-        preview: false,
-      });
-      await vscode.window.showTextDocument(stderrUri, {
-        viewColumn: vscode.ViewColumn.Two,
-        preserveFocus: true,
-        preview: false,
-      });
-      refreshOutput();
-    })
+    vscode.commands.registerCommand(
+      "deviz.openView",
+      async (uri: vscode.Uri) => {
+        await vscode.window.showTextDocument(uri, {
+          viewColumn: vscode.ViewColumn.Two,
+          preserveFocus: true,
+          preview: false,
+        });
+        refresh();
+      }
+    )
   );
 }
