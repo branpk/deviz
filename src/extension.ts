@@ -65,6 +65,7 @@ export function activate(context: vscode.ExtensionContext) {
       virtualTextContentProvider.setFileContent(stderrUri, stderr);
     });
 
+    // TODO: Kill process if still running
     // TODO: Should be async
   };
 
