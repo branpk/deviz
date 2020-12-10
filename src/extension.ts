@@ -3,6 +3,30 @@ import * as vscode from "vscode";
 import { VirtualFileSystemProvider } from "./virtualFileSystem";
 import { VirtualTextContentProvider } from "./virtualTextContentProvider";
 
+class ViewTreeProvider implements vscode.TreeDataProvider<ViewTreeItem> {
+  getTreeItem(element: ViewTreeItem): vscode.TreeItem {
+    return element;
+  }
+
+  getChildren(element?: ViewTreeItem): vscode.ProviderResult<ViewTreeItem[]> {
+    if (element) {
+      return [];
+    } else {
+      return ["stdin", "stdout", "stderr"].map((id) => new ViewTreeItem(id));
+    }
+  }
+}
+
+class ViewTreeItem implements vscode.TreeItem {
+  label: string;
+  id: string;
+
+  constructor(id: string) {
+    this.label = id;
+    this.id = id;
+  }
+}
+
 export function activate(context: vscode.ExtensionContext) {
   const virtualFileSystem = new VirtualFileSystemProvider();
   const virtualTextContentProvider = new VirtualTextContentProvider();
@@ -84,7 +108,15 @@ export function activate(context: vscode.ExtensionContext) {
         break;
     }
   });
-  vscode.workspace.onDidSaveTextDocument(refreshOutput);
+  vscode.workspace.onDidSaveTextDocument((event) => {
+    if (!event.uri.scheme.startsWith("deviz-")) {
+      refreshOutput();
+    }
+  });
+
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider("devizViews", new ViewTreeProvider())
+  );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("deviz.startSession", async () => {

@@ -19,6 +19,20 @@
 				"command": "deviz.startSession",
 				"title": "Deviz: Start session"
 			}
+		],
+		"views": {
+			"explorer": [
+				{
+					"id": "devizViews",
+					"name": "Deviz: I/O Views"
+				}
+			]
+		},
+		"viewsWelcome": [
+			{
+				"view": "devizViews",
+				"contents": "[Start session](command:deviz.startSession)"
+			}
 		]
 	},
 	"scripts": {
