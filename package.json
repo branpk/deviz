@@ -10,14 +10,14 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:deviz.show"
+		"onCommand:deviz.startSession"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
 		"commands": [
 			{
-				"command": "deviz.show",
-				"title": "Deviz: Show"
+				"command": "deviz.startSession",
+				"title": "Deviz: Start session"
 			}
 		]
 	},

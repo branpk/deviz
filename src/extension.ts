@@ -18,8 +18,9 @@ export function activate(context: vscode.ExtensionContext) {
     )
   );
 
-  const inputUri = vscode.Uri.parse("deviz-input-text:/input");
-  const outputUri = vscode.Uri.parse("deviz-output-text:/output");
+  const stdinUri = vscode.Uri.parse("deviz-input-text:/stdin");
+  const stdoutUri = vscode.Uri.parse("deviz-output-text:/stdout");
+  const stderrUri = vscode.Uri.parse("deviz-output-text:/stderr");
 
   const refreshOutput = () => {
     const inputDocument = vscode.workspace.textDocuments.find(
@@ -38,7 +39,11 @@ export function activate(context: vscode.ExtensionContext) {
     const workspacePath = vscode.workspace.workspaceFolders[0].uri.fsPath;
     const command = "cargo run";
 
-    const process = spawn(command, { cwd: workspacePath, shell: true });
+    const process = spawn(command, {
+      cwd: workspacePath,
+      shell: true,
+      env: { ["DEVIZ_SERVER"]: "1" },
+    });
 
     process.stdin.write(inputText);
     process.stdin.end();
@@ -55,14 +60,12 @@ export function activate(context: vscode.ExtensionContext) {
       stderr += chunk;
     });
 
-    process.on("close", (code) => {
-      console.log(`${command} exited with code ${code}`);
-
-      virtualTextContentProvider.setFileContent(
-        outputUri,
-        `stdout:\n${stdout}\nstderr:\n${stderr}\n`
-      );
+    process.on("close", () => {
+      virtualTextContentProvider.setFileContent(stdoutUri, stdout);
+      virtualTextContentProvider.setFileContent(stderrUri, stderr);
     });
+
+    // TODO: Should be async
   };
 
   vscode.workspace.onDidChangeTextDocument((event) => {
@@ -83,17 +86,23 @@ export function activate(context: vscode.ExtensionContext) {
   vscode.workspace.onDidSaveTextDocument(refreshOutput);
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("deviz.show", async () => {
-      await vscode.window.showTextDocument(inputUri, {
+    vscode.commands.registerCommand("deviz.startSession", async () => {
+      await vscode.window.showTextDocument(stdinUri, {
         viewColumn: vscode.ViewColumn.Two,
         preserveFocus: true,
         preview: false,
       });
-      await vscode.window.showTextDocument(outputUri, {
+      await vscode.window.showTextDocument(stdoutUri, {
         viewColumn: vscode.ViewColumn.Two,
         preserveFocus: true,
         preview: false,
       });
+      await vscode.window.showTextDocument(stderrUri, {
+        viewColumn: vscode.ViewColumn.Two,
+        preserveFocus: true,
+        preview: false,
+      });
+      refreshOutput();
     })
   );
 }
