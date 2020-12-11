@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
-import { TextOutputPaneProvider } from "./textOutputPaneProvider";
-import { TreeOutputPaneProvider } from "./treeOutputPaneProvider";
+import { TextOutputPaneProvider } from "./paneProviders/textOutputPaneProvider";
+import { TreeOutputPaneProvider } from "./paneProviders/treeOutputPaneProvider";
 import * as api from "./api";
-import { TextInputPaneProvider } from "./textInputPaneProvider";
+import { TextInputPaneProvider } from "./paneProviders/textInputPaneProvider";
 import { PaneTreeProvider } from "./paneTree";
 
 export class PaneManager {

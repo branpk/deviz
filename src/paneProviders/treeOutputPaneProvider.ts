@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import * as api from "./api";
-import { fixTextHighlight, TextContentProvider } from "./textContentProvider";
+import * as api from "../api";
+import { fixTextHighlight, TextContentProvider } from "../textContentProvider";
 
 const SCHEME = "deviz-output-tree";
 

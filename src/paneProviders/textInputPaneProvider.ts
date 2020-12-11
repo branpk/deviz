@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { VirtualFileSystem } from "./virtualFileSystem";
+import { VirtualFileSystem } from "../virtualFileSystem";
 
 export const SCHEME = "deviz-input-text";
 

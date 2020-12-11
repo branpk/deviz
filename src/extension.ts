@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { runServerCommand } from "./communication";
 import { DevizConfig } from "./config";
 import { PaneManager } from "./paneManager";
-import { SCHEME as TEXT_INPUT_SCHEME } from "./textInputPaneProvider";
+import { SCHEME as TEXT_INPUT_SCHEME } from "./paneProviders/textInputPaneProvider";
 
 export function activate(context: vscode.ExtensionContext) {
   const config: DevizConfig = {
