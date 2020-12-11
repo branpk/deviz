@@ -40,6 +40,7 @@ export class TreeOutputPaneProvider {
 const formatTree = (tree: api.Tree, indent: number = 0): string => {
   const indentStr = " ".repeat(2 * indent);
   const label = tree.label === null ? "." : tree.label;
+  const labelStr = JSON.stringify(label).slice(1, -1);
   const children = tree.children.map((child) => formatTree(child, indent + 1));
-  return `${indentStr}${label}\n${children.join("")}`;
+  return `${indentStr}${labelStr}\n${children.join("")}`;
 };

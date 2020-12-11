@@ -48,7 +48,6 @@ export class PaneManager {
   updateOutputPanes(
     panes: { name: string; content: string | api.PaneContent }[]
   ) {
-    // TODO: Maybe close tab if type changes or name is deleted
     // TODO: Validate pane name (no "/" etc) and ensure unique
     for (const { name, content: contentOrStr } of panes) {
       const content = toPaneContent(contentOrStr);
