@@ -1,10 +1,22 @@
 import { spawn } from "child_process";
 import * as vscode from "vscode";
+import { runServerCommand } from "./communication";
+import { DevizConfig } from "./config";
 import { ViewTreeProvider } from "./viewTree";
 import { VirtualFileSystemProvider } from "./virtualFileSystem";
 import { VirtualTextContentProvider } from "./virtualTextContentProvider";
 
 export function activate(context: vscode.ExtensionContext) {
+  const config: DevizConfig = {
+    mode: {
+      type: "runOnSourceEdit",
+      runCommand: {
+        command: "cargo run",
+        env: {},
+      },
+    },
+  };
+
   const stdinUri = vscode.Uri.parse("deviz-input-text:/stdin");
   const stdoutUri = vscode.Uri.parse("deviz-output-text:/stdout");
   const stderrUri = vscode.Uri.parse("deviz-output-text:/stderr");
@@ -29,6 +41,7 @@ export function activate(context: vscode.ExtensionContext) {
     )
   );
 
+  // TODO: Should be async
   const refresh = () => {
     const inputDocument = vscode.workspace.textDocuments.find(
       (document) => document.uri.scheme === "deviz-input-text"
@@ -44,36 +57,13 @@ export function activate(context: vscode.ExtensionContext) {
       return;
     }
     const workspacePath = vscode.workspace.workspaceFolders[0].uri.fsPath;
-    const command = "cargo run";
 
-    const process = spawn(command, {
-      cwd: workspacePath,
-      shell: true,
-      env: { ["DEVIZ_SERVER"]: "1" },
-    });
-
-    process.stdin.write(inputText);
-    process.stdin.end();
-
-    let stdout = "";
-    let numChunks = 0;
-    process.stdout.on("data", (chunk) => {
-      numChunks += 1;
-      stdout += chunk;
-    });
-
-    let stderr = "";
-    process.stderr.on("data", (chunk) => {
-      stderr += chunk;
-    });
-
-    process.on("close", () => {
-      virtualTextContentProvider.setFileContent(stdoutUri, stdout);
-      virtualTextContentProvider.setFileContent(stderrUri, stderr);
-    });
-
-    // TODO: Kill process if still running
-    // TODO: Should be async
+    runServerCommand(workspacePath, config.mode.runCommand, inputText).then(
+      ({ stdout, stderr, commands }) => {
+        virtualTextContentProvider.setFileContent(stdoutUri, stdout);
+        virtualTextContentProvider.setFileContent(stderrUri, stderr);
+      }
+    );
   };
 
   vscode.workspace.onDidChangeTextDocument((event) => {
