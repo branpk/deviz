@@ -1,9 +1,7 @@
 import { TextDecoder, TextEncoder } from "util";
 import * as vscode from "vscode";
 
-// TODO: Rename to something like inputTextProvider
-
-export class VirtualFileSystemProvider implements vscode.FileSystemProvider {
+export class InputTextProvider implements vscode.FileSystemProvider {
   _onDidChangeFileEmitter = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
   onDidChangeFile = this._onDidChangeFileEmitter.event;
 
@@ -19,13 +17,14 @@ export class VirtualFileSystemProvider implements vscode.FileSystemProvider {
   }
 
   getFileContent(uri: vscode.Uri): string {
-    const content = this._getFile(uri)._content;
+    const content = this.readFile(uri);
     return new TextDecoder().decode(content);
   }
 
-  setFileContent(uri: vscode.Uri, text: string) {
+  setFileContentAfterEdit(uri: vscode.Uri, text: string) {
     const content = new TextEncoder().encode(text);
-    this._getFile(uri).write(content);
+    // Avoid updating mtime
+    this._getFile(uri)._content = content;
   }
 
   watch(
@@ -35,7 +34,7 @@ export class VirtualFileSystemProvider implements vscode.FileSystemProvider {
     return new vscode.Disposable(() => {});
   }
 
-  stat(uri: vscode.Uri): vscode.FileStat | Thenable<vscode.FileStat> {
+  stat(uri: vscode.Uri): vscode.FileStat {
     return this._getFile(uri).stat();
   }
 
@@ -55,14 +54,8 @@ export class VirtualFileSystemProvider implements vscode.FileSystemProvider {
     uri: vscode.Uri,
     content: Uint8Array,
     options: { create: boolean; overwrite: boolean }
-  ): void | Thenable<void> {
+  ): void {
     this._getFile(uri).write(content);
-    this._onDidChangeFileEmitter.fire([
-      {
-        type: vscode.FileChangeType.Changed,
-        uri,
-      },
-    ]);
   }
 
   delete(

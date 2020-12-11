@@ -4,8 +4,8 @@ import * as vscode from "vscode";
 import { runServerCommand } from "./communication";
 import { DevizConfig } from "./config";
 import { ViewTreeProvider } from "./viewTree";
-import { VirtualFileSystemProvider } from "./virtualFileSystem";
-import { VirtualTextContentProvider } from "./virtualTextContentProvider";
+import { InputTextProvider } from "./inputTextProvider";
+import { OutputTextProvider } from "./outputTextProvider";
 
 export function activate(context: vscode.ExtensionContext) {
   const config: DevizConfig = {
@@ -29,17 +29,17 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.window.registerTreeDataProvider("devizViews", viewTreeProvider)
   );
 
-  const virtualFileSystem = new VirtualFileSystemProvider();
-  const virtualTextContentProvider = new VirtualTextContentProvider();
+  const inputTextProvider = new InputTextProvider();
+  const outputTextProvider = new OutputTextProvider();
 
   context.subscriptions.push(
     vscode.workspace.registerFileSystemProvider(
       "deviz-input-text",
-      virtualFileSystem
+      inputTextProvider
     ),
     vscode.workspace.registerTextDocumentContentProvider(
       "deviz-output-text",
-      virtualTextContentProvider
+      outputTextProvider
     )
   );
 
@@ -51,13 +51,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
     const workspacePath = vscode.workspace.workspaceFolders[0].uri.fsPath;
 
-    const inputDocument = vscode.workspace.textDocuments.find(
-      (document) => document.uri.scheme === "deviz-input-text"
-    );
-    // TODO: Save to virtualFileSystem when stdin is edited so that ternery isn't necessary
-    const inputText = inputDocument
-      ? inputDocument.getText()
-      : virtualFileSystem.getFileContent(stdinUri);
+    const inputText = inputTextProvider.getFileContent(stdinUri);
 
     const { stdout, stderr, commands } = await runServerCommand(
       workspacePath,
@@ -66,15 +60,15 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     const views = [stdinUri, stdoutUri, stderrUri];
-    virtualTextContentProvider.setFileContent(stdoutUri, stdout);
-    virtualTextContentProvider.setFileContent(stderrUri, stderr);
+    outputTextProvider.setFileContent(stdoutUri, stdout);
+    outputTextProvider.setFileContent(stderrUri, stderr);
 
     for (const command of commands) {
       for (const tab of command.tabs) {
         // TODO: Tab name should be escaped for uri, but used as is for label
         const uri = vscode.Uri.parse(`deviz-output-text:/${tab.name}`);
         const content = JSON.stringify(tab.content);
-        virtualTextContentProvider.setFileContent(uri, content);
+        outputTextProvider.setFileContent(uri, content);
         views.push(uri);
       }
     }
@@ -85,7 +79,13 @@ export function activate(context: vscode.ExtensionContext) {
   vscode.workspace.onDidChangeTextDocument(async (event) => {
     switch (event.document.uri.scheme) {
       case "deviz-input-text":
-        await refresh();
+        if (event.contentChanges.length > 0) {
+          inputTextProvider.setFileContentAfterEdit(
+            event.document.uri,
+            event.document.getText()
+          );
+          await refresh();
+        }
         break;
 
       case "deviz-output-text":
