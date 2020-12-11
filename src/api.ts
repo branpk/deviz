@@ -1,6 +1,6 @@
 export interface Pane {
   name: string;
-  content: PaneContent;
+  content: string | PaneContent;
 }
 
 export type PaneContent =

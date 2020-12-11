@@ -6,6 +6,10 @@ export class PaneTreeProvider implements vscode.TreeDataProvider<string> {
 
   _panes: string[] = [];
 
+  register(): vscode.Disposable {
+    return vscode.window.registerTreeDataProvider("devizPanes", this);
+  }
+
   setPanes(panes: string[]) {
     this._panes = panes;
     this._onDidChangeTreeDataEmitter.fire(null);

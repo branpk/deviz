@@ -1,8 +1,6 @@
 import * as vscode from "vscode";
 import { runServerCommand } from "./communication";
 import { DevizConfig } from "./config";
-import { PaneTreeProvider } from "./paneTree";
-import * as api from "./api";
 import { PaneManager } from "./paneManager";
 import { SCHEME as TEXT_INPUT_SCHEME } from "./textInputPaneProvider";
 
@@ -16,11 +14,6 @@ export function activate(context: vscode.ExtensionContext) {
       },
     },
   };
-
-  const paneTreeProvider = new PaneTreeProvider();
-  context.subscriptions.push(
-    vscode.window.registerTreeDataProvider("devizPanes", paneTreeProvider)
-  );
 
   const paneManager = new PaneManager();
   context.subscriptions.push(paneManager.register());
@@ -40,17 +33,11 @@ export function activate(context: vscode.ExtensionContext) {
       stdin
     );
 
-    const allPanes = ["stdin", "stdout", "stderr"];
-    paneManager.setOutputPaneContent("stdout", textPaneContent(stdout));
-    paneManager.setOutputPaneContent("stderr", textPaneContent(stderr));
-
-    for (const pane of userPanes) {
-      // TODO: Validate pane name (no "/" etc) and ensure unique
-      paneManager.setOutputPaneContent(pane.name, pane.content);
-      allPanes.push(pane.name);
-    }
-
-    paneTreeProvider.setPanes(allPanes);
+    paneManager.updateOutputPanes([
+      { name: "stdout", content: stdout },
+      { name: "stderr", content: stderr },
+      ...userPanes,
+    ]);
   };
 
   vscode.workspace.onDidChangeTextDocument(async (event) => {
@@ -69,20 +56,10 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand("deviz.startSession", async () => {
       await refresh();
-    })
-  );
-
-  context.subscriptions.push(
+    }),
     vscode.commands.registerCommand("deviz.openPane", async (name: string) => {
       await paneManager.openPane(name);
       await refresh(); // TODO: Is this necessary?
     })
   );
-}
-
-function textPaneContent(text: string): api.PaneContent {
-  return {
-    type: "text",
-    data: { text, hovers: [] },
-  };
 }
