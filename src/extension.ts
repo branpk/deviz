@@ -1,4 +1,5 @@
 import { spawn } from "child_process";
+import { TextDecoder } from "util";
 import * as vscode from "vscode";
 import { runServerCommand } from "./communication";
 import { DevizConfig } from "./config";
@@ -20,9 +21,10 @@ export function activate(context: vscode.ExtensionContext) {
   const stdinUri = vscode.Uri.parse("deviz-input-text:/stdin");
   const stdoutUri = vscode.Uri.parse("deviz-output-text:/stdout");
   const stderrUri = vscode.Uri.parse("deviz-output-text:/stderr");
+  const defaultViews = [stdinUri, stdoutUri, stderrUri];
 
   const viewTreeProvider = new ViewTreeProvider();
-  viewTreeProvider.setViews([stdinUri, stdoutUri, stderrUri]);
+  viewTreeProvider.setViews(defaultViews);
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider("devizViews", viewTreeProvider)
   );
@@ -41,35 +43,49 @@ export function activate(context: vscode.ExtensionContext) {
     )
   );
 
-  // TODO: Should be async
-  const refresh = () => {
-    const inputDocument = vscode.workspace.textDocuments.find(
-      (document) => document.uri.scheme === "deviz-input-text"
-    );
-    if (!inputDocument) {
-      // TODO: Fetch from virtual file system
-      return;
-    }
-    const inputText = inputDocument.getText();
-
+  const refresh = async () => {
+    // TODO: Probably show this on startSession and don't show default views in tree
     if (!vscode.workspace.workspaceFolders) {
       vscode.window.showErrorMessage("Deviz: Must have folder open");
       return;
     }
     const workspacePath = vscode.workspace.workspaceFolders[0].uri.fsPath;
 
-    runServerCommand(workspacePath, config.mode.runCommand, inputText).then(
-      ({ stdout, stderr, commands }) => {
-        virtualTextContentProvider.setFileContent(stdoutUri, stdout);
-        virtualTextContentProvider.setFileContent(stderrUri, stderr);
-      }
+    const inputDocument = vscode.workspace.textDocuments.find(
+      (document) => document.uri.scheme === "deviz-input-text"
     );
+    // TODO: Save to virtualFileSystem when stdin is edited so that ternery isn't necessary
+    const inputText = inputDocument
+      ? inputDocument.getText()
+      : virtualFileSystem.getFileContent(stdinUri);
+
+    const { stdout, stderr, commands } = await runServerCommand(
+      workspacePath,
+      config.mode.runCommand,
+      inputText
+    );
+
+    const views = [stdinUri, stdoutUri, stderrUri];
+    virtualTextContentProvider.setFileContent(stdoutUri, stdout);
+    virtualTextContentProvider.setFileContent(stderrUri, stderr);
+
+    for (const command of commands) {
+      for (const tab of command.tabs) {
+        // TODO: Tab name should be escaped for uri, but used as is for label
+        const uri = vscode.Uri.parse(`deviz-output-text:/${tab.name}`);
+        const content = JSON.stringify(tab.content);
+        virtualTextContentProvider.setFileContent(uri, content);
+        views.push(uri);
+      }
+    }
+
+    viewTreeProvider.setViews(views);
   };
 
-  vscode.workspace.onDidChangeTextDocument((event) => {
+  vscode.workspace.onDidChangeTextDocument(async (event) => {
     switch (event.document.uri.scheme) {
       case "deviz-input-text":
-        refresh();
+        await refresh();
         break;
 
       case "deviz-output-text":
@@ -81,15 +97,15 @@ export function activate(context: vscode.ExtensionContext) {
         break;
     }
   });
-  vscode.workspace.onDidSaveTextDocument((event) => {
+  vscode.workspace.onDidSaveTextDocument(async (event) => {
     if (!event.uri.scheme.startsWith("deviz-")) {
-      refresh();
+      await refresh();
     }
   });
 
   context.subscriptions.push(
     vscode.commands.registerCommand("deviz.startSession", async () => {
-      refresh();
+      await refresh();
     })
   );
 
@@ -102,7 +118,7 @@ export function activate(context: vscode.ExtensionContext) {
           preserveFocus: true,
           preview: false,
         });
-        refresh();
+        await refresh();
       }
     )
   );

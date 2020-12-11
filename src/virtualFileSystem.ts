@@ -1,4 +1,7 @@
+import { TextDecoder, TextEncoder } from "util";
 import * as vscode from "vscode";
+
+// TODO: Rename to something like inputTextProvider
 
 export class VirtualFileSystemProvider implements vscode.FileSystemProvider {
   _onDidChangeFileEmitter = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
@@ -13,6 +16,16 @@ export class VirtualFileSystemProvider implements vscode.FileSystemProvider {
       this._files.set(uri.path, file);
     }
     return file;
+  }
+
+  getFileContent(uri: vscode.Uri): string {
+    const content = this._getFile(uri)._content;
+    return new TextDecoder().decode(content);
+  }
+
+  setFileContent(uri: vscode.Uri, text: string) {
+    const content = new TextEncoder().encode(text);
+    this._getFile(uri).write(content);
   }
 
   watch(
@@ -34,7 +47,7 @@ export class VirtualFileSystemProvider implements vscode.FileSystemProvider {
 
   createDirectory(uri: vscode.Uri): void | Thenable<void> {}
 
-  readFile(uri: vscode.Uri): Uint8Array | Thenable<Uint8Array> {
+  readFile(uri: vscode.Uri): Uint8Array {
     return this._getFile(uri).read();
   }
 

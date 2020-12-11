@@ -1,5 +1,7 @@
 import * as vscode from "vscode";
 
+// TODO: Rename to something like outputTextProvider
+
 export class VirtualTextContentProvider
   implements vscode.TextDocumentContentProvider {
   _onDidChangeEmitter = new vscode.EventEmitter<vscode.Uri>();
