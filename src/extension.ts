@@ -4,6 +4,7 @@ import { DevizConfig } from "./config";
 import { PaneTreeProvider } from "./paneTree";
 import * as api from "./api";
 import { PaneManager } from "./paneManager";
+import { SCHEME as TEXT_INPUT_SCHEME } from "./textInputPaneProvider";
 
 export function activate(context: vscode.ExtensionContext) {
   const config: DevizConfig = {
@@ -31,21 +32,21 @@ export function activate(context: vscode.ExtensionContext) {
     }
     const workspacePath = vscode.workspace.workspaceFolders[0].uri.fsPath;
 
-    const inputText = paneManager.getInputText();
+    const stdin = paneManager.stdinText();
 
     const { stdout, stderr, panes: userPanes } = await runServerCommand(
       workspacePath,
       config.mode.runCommand,
-      inputText
+      stdin
     );
 
     const allPanes = ["stdin", "stdout", "stderr"];
-    paneManager.setPaneContent("stdout", textPaneContent(stdout));
-    paneManager.setPaneContent("stderr", textPaneContent(stderr));
+    paneManager.setOutputPaneContent("stdout", textPaneContent(stdout));
+    paneManager.setOutputPaneContent("stderr", textPaneContent(stderr));
 
     for (const pane of userPanes) {
       // TODO: Validate pane name (no "/" etc) and ensure unique
-      paneManager.setPaneContent(pane.name, pane.content);
+      paneManager.setOutputPaneContent(pane.name, pane.content);
       allPanes.push(pane.name);
     }
 
@@ -53,12 +54,8 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   vscode.workspace.onDidChangeTextDocument(async (event) => {
-    if (event.document.uri.scheme === "deviz-input-text") {
+    if (event.document.uri.scheme === TEXT_INPUT_SCHEME) {
       if (event.contentChanges.length > 0) {
-        paneManager._input.setFileContentAfterEdit(
-          event.document.uri,
-          event.document.getText()
-        );
         await refresh();
       }
     }

@@ -1,7 +1,6 @@
-import { TextDecoder, TextEncoder } from "util";
 import * as vscode from "vscode";
 
-export class InputTextProvider implements vscode.FileSystemProvider {
+export class VirtualFileSystem implements vscode.FileSystemProvider {
   _onDidChangeFileEmitter = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
   onDidChangeFile = this._onDidChangeFileEmitter.event;
 
@@ -16,22 +15,11 @@ export class InputTextProvider implements vscode.FileSystemProvider {
     return file;
   }
 
-  getFileContent(uri: vscode.Uri): string {
-    const content = this.readFile(uri);
-    return new TextDecoder().decode(content);
-  }
-
-  setFileContentAfterEdit(uri: vscode.Uri, text: string) {
-    const content = new TextEncoder().encode(text);
-    // Avoid updating mtime
-    this._getFile(uri)._content = content;
-  }
-
   watch(
     uri: vscode.Uri,
     options: { recursive: boolean; excludes: string[] }
   ): vscode.Disposable {
-    return new vscode.Disposable(() => {});
+    return vscode.Disposable.from();
   }
 
   stat(uri: vscode.Uri): vscode.FileStat {

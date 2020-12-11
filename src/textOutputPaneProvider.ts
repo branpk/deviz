@@ -1,12 +1,10 @@
-import { AssertionError } from "assert";
 import * as vscode from "vscode";
 import * as api from "./api";
-import { OutputPaneProvider } from "./paneProvider";
 import { fixTextHighlight, TextContentProvider } from "./textContentProvider";
 
 const SCHEME = "deviz-output-text";
 
-export class TextOutputPaneProvider implements OutputPaneProvider<api.Text> {
+export class TextOutputPaneProvider {
   _contentProvider = new TextContentProvider();
 
   _nameToUri(name: string): vscode.Uri {
