@@ -1,11 +1,14 @@
-import { spawn } from "child_process";
-import { TextDecoder } from "util";
 import * as vscode from "vscode";
 import { runServerCommand } from "./communication";
 import { DevizConfig } from "./config";
 import { ViewTreeProvider } from "./viewTree";
 import { InputTextProvider } from "./inputTextProvider";
 import { OutputTextProvider } from "./outputTextProvider";
+import * as api from "./api";
+
+const STDIN_URI = vscode.Uri.parse("deviz-input-text:/stdin");
+const STDOUT_URI = vscode.Uri.parse("deviz-output-text:/stdout");
+const STDERR_URI = vscode.Uri.parse("deviz-output-text:/stderr");
 
 export function activate(context: vscode.ExtensionContext) {
   const config: DevizConfig = {
@@ -18,20 +21,13 @@ export function activate(context: vscode.ExtensionContext) {
     },
   };
 
-  const stdinUri = vscode.Uri.parse("deviz-input-text:/stdin");
-  const stdoutUri = vscode.Uri.parse("deviz-output-text:/stdout");
-  const stderrUri = vscode.Uri.parse("deviz-output-text:/stderr");
-  const defaultViews = [stdinUri, stdoutUri, stderrUri];
-
   const viewTreeProvider = new ViewTreeProvider();
-  viewTreeProvider.setViews(defaultViews);
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider("devizViews", viewTreeProvider)
   );
 
   const inputTextProvider = new InputTextProvider();
   const outputTextProvider = new OutputTextProvider();
-
   context.subscriptions.push(
     vscode.workspace.registerFileSystemProvider(
       "deviz-input-text",
@@ -44,14 +40,13 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   const refresh = async () => {
-    // TODO: Probably show this on startSession and don't show default views in tree
     if (!vscode.workspace.workspaceFolders) {
       vscode.window.showErrorMessage("Deviz: Must have folder open");
       return;
     }
     const workspacePath = vscode.workspace.workspaceFolders[0].uri.fsPath;
 
-    const inputText = inputTextProvider.getFileContent(stdinUri);
+    const inputText = inputTextProvider.getFileContent(STDIN_URI);
 
     const { stdout, stderr, commands } = await runServerCommand(
       workspacePath,
@@ -59,21 +54,48 @@ export function activate(context: vscode.ExtensionContext) {
       inputText
     );
 
-    const views = [stdinUri, stdoutUri, stderrUri];
-    outputTextProvider.setFileContent(stdoutUri, stdout);
-    outputTextProvider.setFileContent(stderrUri, stderr);
+    const views = [STDIN_URI, STDOUT_URI, STDERR_URI];
+    outputTextProvider.setFileContent(STDOUT_URI, stdout);
+    outputTextProvider.setFileContent(STDERR_URI, stderr);
 
     for (const command of commands) {
-      for (const tab of command.tabs) {
-        // TODO: Tab name should be escaped for uri, but used as is for label
-        const uri = vscode.Uri.parse(`deviz-output-text:/${tab.name}`);
-        const content = JSON.stringify(tab.content);
-        outputTextProvider.setFileContent(uri, content);
+      for (const view of command.views) {
+        // TODO: View name should be escaped for uri, but used as is for label
+        const uri = setViewContent(`/${view.name}`, view.content);
         views.push(uri);
       }
     }
 
     viewTreeProvider.setViews(views);
+  };
+
+  const setViewContent = (
+    path: string,
+    content: api.ViewContent
+  ): vscode.Uri => {
+    switch (content.type) {
+      case "Text": {
+        const uri = vscode.Uri.parse(`deviz-output-text:${path}`);
+        const text = content.data.text;
+        outputTextProvider.setFileContent(uri, text);
+        return uri;
+      }
+      case "Tree": {
+        const uri = vscode.Uri.parse(`deviz-output-text:${path}`);
+        const text = renderTextTree(content.data);
+        outputTextProvider.setFileContent(uri, text);
+        return uri;
+      }
+    }
+  };
+
+  const renderTextTree = (tree: api.Tree, indent: number = 0): string => {
+    const indentStr = " ".repeat(2 * indent);
+    const label = tree.label === null ? "." : tree.label;
+    const children = tree.children.map((child) =>
+      renderTextTree(child, indent + 1)
+    );
+    return `${indentStr}${label}\n${children.join("")}`;
   };
 
   vscode.workspace.onDidChangeTextDocument(async (event) => {

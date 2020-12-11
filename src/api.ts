@@ -1,21 +1,15 @@
 export interface Command {
-  tabs: Tab[];
+  views: View[];
 }
 
-export interface Tab {
+export interface View {
   name: string;
-  content: TabContent;
+  content: ViewContent;
 }
 
-export type TabContent =
-  | {
-      type: "Text";
-      data: Text;
-    }
-  | {
-      type: "Tree";
-      data: Tree;
-    };
+export type ViewContent =
+  | { type: "Text"; data: Text }
+  | { type: "Tree"; data: Tree };
 
 export interface Text {
   text: string;
