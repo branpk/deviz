@@ -59,7 +59,6 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand("deviz.openPane", async (name: string) => {
       await paneManager.openPane(name);
-      await refresh(); // TODO: Is this necessary?
     })
   );
 }
