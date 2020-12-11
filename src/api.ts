@@ -5,7 +5,7 @@ export interface Pane {
 
 export type PaneContent =
   | { type: "text"; data: Text }
-  | { type: "tree"; data: Tree };
+  | { type: "textTree"; data: Tree };
 
 export interface Text {
   text: string;

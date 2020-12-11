@@ -2,9 +2,9 @@ import * as vscode from "vscode";
 import * as api from "../api";
 import { fixTextHighlight, TextContentProvider } from "../textContentProvider";
 
-const SCHEME = "deviz-output-tree";
+const SCHEME = "deviz-output-text-tree";
 
-export class TreeOutputPaneProvider {
+export class TextTreeOutputPaneProvider {
   _contentProvider = new TextContentProvider();
 
   _nameToUri(name: string): vscode.Uri {
