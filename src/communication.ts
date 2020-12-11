@@ -9,7 +9,7 @@ export interface ProgramOutput {
 }
 
 export interface ServerOutput extends ProgramOutput {
-  commands: api.Command[];
+  panes: api.Pane[];
 }
 
 // TODO: Kill process if still running
@@ -31,8 +31,8 @@ export async function runServerCommand(
     { command, env: { ...env, ["DEVIZ_SERVER"]: "1" } },
     stdin
   );
-  const { strippedStderr, commands } = parseStderr(stderr);
-  return { stdout, stderr: strippedStderr, commands };
+  const { strippedStderr, panes } = parseStderr(stderr);
+  return { stdout, stderr: strippedStderr, panes };
 }
 
 function runCommand(
@@ -71,9 +71,9 @@ const END_MARKER = "|DEVIZ:END|";
 
 function parseStderr(
   stderr: string
-): { strippedStderr: string; commands: api.Command[] } {
+): { strippedStderr: string; panes: api.Pane[] } {
   let strippedStderr = "";
-  let commandSources = [];
+  let outputChunks = [];
 
   let remaining = stderr;
   while (true) {
@@ -88,17 +88,17 @@ function parseStderr(
     const endMarkerIndex = remaining.indexOf(END_MARKER);
     // TODO: Better error handling
     assert(endMarkerIndex >= 0);
-    commandSources.push(remaining.slice(0, endMarkerIndex));
+    outputChunks.push(remaining.slice(0, endMarkerIndex));
     remaining = remaining.slice(endMarkerIndex + END_MARKER.length);
   }
 
   return {
     strippedStderr,
-    commands: commandSources.map(parseCommand),
+    panes: new Array<api.Pane>().concat(...outputChunks.map(parseOutputChunk)),
   };
 }
 
-function parseCommand(source: string): api.Command {
+function parseOutputChunk(source: string): api.Pane[] {
   // TODO: Validation
   return JSON.parse(source);
 }

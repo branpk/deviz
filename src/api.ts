@@ -1,13 +1,9 @@
-export interface Command {
-  views: View[];
-}
-
-export interface View {
+export interface Pane {
   name: string;
-  content: ViewContent;
+  content: PaneContent;
 }
 
-export type ViewContent =
+export type PaneContent =
   | { type: "Text"; data: Text }
   | { type: "Tree"; data: Tree };
 

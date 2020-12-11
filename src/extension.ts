@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { runServerCommand } from "./communication";
 import { DevizConfig } from "./config";
-import { ViewTreeProvider } from "./viewTree";
+import { PaneTreeProvider } from "./paneTree";
 import { InputTextProvider } from "./inputTextProvider";
 import { OutputTextProvider } from "./outputTextProvider";
 import * as api from "./api";
@@ -21,9 +21,9 @@ export function activate(context: vscode.ExtensionContext) {
     },
   };
 
-  const viewTreeProvider = new ViewTreeProvider();
+  const paneTreeProvider = new PaneTreeProvider();
   context.subscriptions.push(
-    vscode.window.registerTreeDataProvider("devizViews", viewTreeProvider)
+    vscode.window.registerTreeDataProvider("devizPanes", paneTreeProvider)
   );
 
   const inputTextProvider = new InputTextProvider();
@@ -48,30 +48,28 @@ export function activate(context: vscode.ExtensionContext) {
 
     const inputText = inputTextProvider.getFileContent(STDIN_URI);
 
-    const { stdout, stderr, commands } = await runServerCommand(
+    const { stdout, stderr, panes: userPanes } = await runServerCommand(
       workspacePath,
       config.mode.runCommand,
       inputText
     );
 
-    const views = [STDIN_URI, STDOUT_URI, STDERR_URI];
+    const allPanes = [STDIN_URI, STDOUT_URI, STDERR_URI];
     outputTextProvider.setFileContent(STDOUT_URI, stdout);
     outputTextProvider.setFileContent(STDERR_URI, stderr);
 
-    for (const command of commands) {
-      for (const view of command.views) {
-        // TODO: View name should be escaped for uri, but used as is for label
-        const uri = setViewContent(`/${view.name}`, view.content);
-        views.push(uri);
-      }
+    for (const pane of userPanes) {
+      // TODO: Pane name should be escaped for uri, but used as is for label
+      const uri = setPaneContent(`/${pane.name}`, pane.content);
+      allPanes.push(uri);
     }
 
-    viewTreeProvider.setViews(views);
+    paneTreeProvider.setPanes(allPanes);
   };
 
-  const setViewContent = (
+  const setPaneContent = (
     path: string,
-    content: api.ViewContent
+    content: api.PaneContent
   ): vscode.Uri => {
     switch (content.type) {
       case "Text": {
@@ -133,7 +131,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand(
-      "deviz.openView",
+      "deviz.openPane",
       async (uri: vscode.Uri) => {
         await vscode.window.showTextDocument(uri, {
           viewColumn: vscode.ViewColumn.Two,

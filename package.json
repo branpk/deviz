@@ -23,14 +23,14 @@
 		"views": {
 			"explorer": [
 				{
-					"id": "devizViews",
-					"name": "Deviz: I/O Views"
+					"id": "devizPanes",
+					"name": "Deviz Panes"
 				}
 			]
 		},
 		"viewsWelcome": [
 			{
-				"view": "devizViews",
+				"view": "devizPanes",
 				"contents": "[Start session](command:deviz.startSession)"
 			}
 		]
