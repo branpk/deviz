@@ -1,35 +1,29 @@
 import * as vscode from "vscode";
 
-type PaneId = {
-  uri: vscode.Uri;
-  index: number;
-};
-
-export class PaneTreeProvider implements vscode.TreeDataProvider<PaneId> {
-  _onDidChangeTreeDataEmitter = new vscode.EventEmitter<PaneId | null>();
+export class PaneTreeProvider implements vscode.TreeDataProvider<string> {
+  _onDidChangeTreeDataEmitter = new vscode.EventEmitter<string | null>();
   onDidChangeTreeData = this._onDidChangeTreeDataEmitter.event;
 
-  _panes: PaneId[] = [];
+  _panes: string[] = [];
 
-  setPanes(uris: vscode.Uri[]) {
-    this._panes = uris.map((uri, index) => ({ uri, index }));
+  setPanes(panes: string[]) {
+    this._panes = panes;
     this._onDidChangeTreeDataEmitter.fire(null);
   }
 
-  getTreeItem({ uri, index }: PaneId): vscode.TreeItem {
-    const name = uri.path.slice(1);
+  getTreeItem(name: string): vscode.TreeItem {
     return {
       label: name,
-      id: `${index}-${uri}`,
+      id: name,
       command: {
         title: "Open pane",
         command: "deviz.openPane",
-        arguments: [uri],
+        arguments: [name],
       },
     };
   }
 
-  getChildren(element?: PaneId): vscode.ProviderResult<PaneId[]> {
+  getChildren(element?: string): vscode.ProviderResult<string[]> {
     if (element) {
       return [];
     } else {
