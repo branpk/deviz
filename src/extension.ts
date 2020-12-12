@@ -4,6 +4,8 @@ import { DevizConfig } from "./config";
 import { PaneManager } from "./paneManager";
 import { SCHEME as TEXT_INPUT_SCHEME } from "./paneProviders/textInputPaneProvider";
 
+// TODO: Improve ViewColumn behavior and extract shared open options
+
 export function activate(context: vscode.ExtensionContext) {
   const config: DevizConfig = {
     mode: {

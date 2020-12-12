@@ -1,10 +1,11 @@
 import * as vscode from "vscode";
 import * as api from "../api";
+import { OutputPaneProvider } from "../paneManager";
 import { fixTextHighlight, TextContentProvider } from "../textContentProvider";
 
 const SCHEME = "deviz-output-text";
 
-export class TextOutputPaneProvider {
+export class TextOutputPaneProvider implements OutputPaneProvider<api.Text> {
   _contentProvider = new TextContentProvider();
 
   _nameToUri(name: string): vscode.Uri {
