@@ -7,6 +7,7 @@ import escape from "escape-html";
 // TODO: Tree view:
 // - Collapsing nodes
 // - (If needed) Only redraw lines that may have been affected by sticky positioning
+// - Try curves instead of straight lines
 
 export class TreeOutputPaneProvider implements OutputPaneProvider<api.Tree> {
   _webviewProvider: WebviewProvider = new WebviewProvider();
