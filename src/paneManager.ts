@@ -59,27 +59,30 @@ export class PaneManager {
     }
   }
 
+  setOutputPaneContent(name: string, contentOrStr: string | api.PaneContent) {
+    const content = toPaneContent(contentOrStr);
+
+    this._nameToType.set(name, content.type);
+    switch (content.type) {
+      case "text":
+        this._textOutput.setPaneContent(name, content.data);
+        break;
+      case "tree":
+        this._treeOutput.setPaneContent(name, content.data);
+        break;
+      case "textTree":
+        this._textTreeOutput.setPaneContent(name, content.data);
+        break;
+    }
+  }
+
   updateOutputPanes(
     panes: { name: string; content: string | api.PaneContent }[]
   ) {
     // TODO: Validate pane name (no "/" etc) and ensure unique
-    for (const { name, content: contentOrStr } of panes) {
-      const content = toPaneContent(contentOrStr);
-
-      this._nameToType.set(name, content.type);
-      switch (content.type) {
-        case "text":
-          this._textOutput.setPaneContent(name, content.data);
-          break;
-        case "tree":
-          this._treeOutput.setPaneContent(name, content.data);
-          break;
-        case "textTree":
-          this._textTreeOutput.setPaneContent(name, content.data);
-          break;
-      }
+    for (const { name, content } of panes) {
+      this.setOutputPaneContent(name, content);
     }
-
     this._paneTree.setPanes(["stdin", ...panes.map(({ name }) => name)]);
   }
 }

@@ -4,10 +4,10 @@ import { WebviewProvider, wrapHtml } from "../webviewProvider";
 import { OutputPaneProvider } from "../paneManager";
 import escape from "escape-html";
 
-// TODO: Tree view:
-// - Collapsing nodes
-// - (If needed) Only redraw lines that may have been affected by sticky positioning
-// - Try curves instead of straight lines
+// TODO: Collapsing nodes
+// TODO: Try to maintain horizontal scroll position when content changes
+// TODO: (If needed) Only redraw lines that may have been affected by sticky positioning
+// TODO: Try curves instead of straight lines
 
 export class TreeOutputPaneProvider implements OutputPaneProvider<api.Tree> {
   _webviewProvider: WebviewProvider = new WebviewProvider();

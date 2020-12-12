@@ -4,6 +4,7 @@ import * as api from "./api";
 import { assert } from "console";
 
 export interface ProgramOutput {
+  exitCode: number;
   stdout: string;
   stderr: string;
 }
@@ -26,13 +27,13 @@ export async function runServerCommand(
   { command, env }: CommandInfo,
   stdin: string
 ): Promise<ServerOutput> {
-  const { stdout, stderr } = await runCommand(
+  const output = await runCommand(
     workingDir,
     { command, env: { ...env, ["DEVIZ_SERVER"]: "1" } },
     stdin
   );
-  const { strippedStderr, panes } = parseStderr(stderr);
-  return { stdout, stderr: strippedStderr, panes };
+  const { strippedStderr, panes } = parseStderr(output.stderr);
+  return { ...output, stderr: strippedStderr, panes };
 }
 
 function runCommand(
@@ -60,8 +61,8 @@ function runCommand(
       stderr += chunk;
     });
 
-    process.on("close", () => {
-      resolve({ stdout, stderr });
+    process.on("close", (exitCode) => {
+      resolve({ exitCode, stdout, stderr });
     });
   });
 }

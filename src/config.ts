@@ -8,14 +8,14 @@ export type RunMode =
       runCommand: CommandInfo;
     }
   | {
-      type: "runOnFileChange";
-      watchFile: string;
+      type: "compileOnSourceEdit";
+      compileCommand: CommandInfo;
       runCommand: CommandInfo;
     }
   | {
-      type: "compileOnSourceEdit";
+      type: "runOnFileChange";
+      watchFile: string;
       runCommand: CommandInfo;
-      compileCommand: CommandInfo;
     };
 
 export interface CommandInfo {
