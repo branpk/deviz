@@ -2,10 +2,10 @@ import * as vscode from "vscode";
 import * as api from "../api";
 import { WebviewProvider, wrapHtml } from "../webviewProvider";
 import { OutputPaneProvider } from "../paneManager";
+import escape from "escape-html";
 
 // TODO: Tree view:
 // - Collapsing nodes
-// - Only draw lines that are on screen
 // - (If needed) Only redraw lines that may have been affected by sticky positioning
 
 export class TreeOutputPaneProvider implements OutputPaneProvider<api.Tree> {
@@ -37,14 +37,25 @@ export class TreeOutputPaneProvider implements OutputPaneProvider<api.Tree> {
           top: 0;
           left: 0;
           padding-left: 20px;
+          padding-top: 20px;
+          font-family: var(--vscode-editor-font-family);
+          font-size: var(--vscode-editor-font-size);
+          font-weight: var(--vscode-editor-font-weight);
+          color: var(--vscode-editor-foreground);
         }
         .tree {
           display: flex;
         }
+        .node-container {
+          min-width: 100px;
+        }
         .node {
-          margin-right: 50px;
+          margin-right: 30px;
           position: sticky;
           top: 20px;
+          display: inline-block;
+          white-space: nowrap;
+          padding: 5px;
         }
         .children {
           align-self: flex-start;
@@ -125,7 +136,17 @@ export class TreeOutputPaneProvider implements OutputPaneProvider<api.Tree> {
   }
 
   _renderTree(tree: api.Tree): string {
-    const node = `<div class="node-container"><div class="node">${tree.label}</div></div>`;
+    const label =
+      tree.label === null
+        ? "&middot;"
+        : escape(
+            tree.label
+              .replace("\n", "\\n")
+              .replace("\t", "\\t")
+              .replace("\r", "\\r")
+          );
+
+    const node = `<div class="node-container"><div class="node">${label}</div></div>`;
 
     const childrenInner = tree.children
       .map((child) => this._renderTree(child))
