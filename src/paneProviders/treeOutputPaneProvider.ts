@@ -54,10 +54,10 @@ export class TreeOutputPaneProvider implements OutputPaneProvider<api.Tree> {
     const script = `
       <script>
         function drawTreeLines() {
-          const linesContainer = document.body.getElementsByClassName("lines-container")[0];
+          const linesContainer = document.getElementsByClassName("lines-container")[0];
           linesContainer.innerHTML = "";
 
-          const tree = document.body.getElementsByClassName("root")[0];
+          const tree = document.getElementsByClassName("root")[0];
           const treeRect = tree.getBoundingClientRect();
           const scrollX = -treeRect.left;
           const scrollY = -treeRect.top;
@@ -79,7 +79,17 @@ export class TreeOutputPaneProvider implements OutputPaneProvider<api.Tree> {
             linesContainer.appendChild(line);
           }
 
-          for (const tree of document.body.getElementsByClassName("tree")) {
+          function drawSubtreeLines(tree) {
+            const treeRect = tree.getBoundingClientRect();
+            if (
+              treeRect.right < 0 ||
+              treeRect.left > window.innerWidth ||
+              treeRect.bottom < 0 ||
+              treeRect.top > window.innerHeight
+            ) {
+              return;
+            }
+
             const node = tree.getElementsByClassName("node")[0];
             const nodeRect = node.getBoundingClientRect();
             const nodeX = nodeRect.right;
@@ -93,8 +103,12 @@ export class TreeOutputPaneProvider implements OutputPaneProvider<api.Tree> {
               const childY = (childRect.top + childRect.bottom) / 2;
 
               drawLine(nodeX, nodeY, childX, childY);
+              drawSubtreeLines(childTree);
             }
           }
+
+          const root = document.getElementsByClassName("tree")[0];
+          drawSubtreeLines(root);
         }
 
         window.addEventListener("load", drawTreeLines);
