@@ -17,7 +17,7 @@ export function activate(context: vscode.ExtensionContext) {
         env: {},
       },
       runCommand: {
-        command: "target\\debug\\multido.exe",
+        command: "target\\debug\\test-rs.exe",
         env: {},
       },
     },

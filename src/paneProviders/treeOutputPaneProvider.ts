@@ -39,10 +39,6 @@ export class TreeOutputPaneProvider implements OutputPaneProvider<api.Tree> {
           left: 0;
           padding-left: 20px;
           padding-top: 20px;
-          font-family: var(--vscode-editor-font-family);
-          font-size: var(--vscode-editor-font-size);
-          font-weight: var(--vscode-editor-font-weight);
-          color: var(--vscode-editor-foreground);
         }
         .tree {
           display: flex;
@@ -57,6 +53,13 @@ export class TreeOutputPaneProvider implements OutputPaneProvider<api.Tree> {
           display: inline-block;
           white-space: nowrap;
           padding: 5px;
+        }
+        .label {
+          margin: 0;
+          font-family: var(--vscode-editor-font-family);
+          font-size: var(--vscode-editor-font-size);
+          font-weight: var(--vscode-editor-font-weight);
+          color: var(--vscode-editor-foreground);
         }
         .children {
           align-self: flex-start;
@@ -137,15 +140,8 @@ export class TreeOutputPaneProvider implements OutputPaneProvider<api.Tree> {
   }
 
   _renderTree(tree: api.Tree): string {
-    const label =
-      tree.label === null
-        ? "&middot;"
-        : escape(
-            tree.label
-              .replace("\n", "\\n")
-              .replace("\t", "\\t")
-              .replace("\r", "\\r")
-          );
+    const labelText = tree.label === null ? "&middot;" : escape(tree.label);
+    const label = `<pre class="label">${labelText}</pre>`;
 
     const node = `<div class="node-container"><div class="node">${label}</div></div>`;
 
