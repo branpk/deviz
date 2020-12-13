@@ -6,6 +6,9 @@ import * as path from "path";
 import { getExtensionPath } from "../extension";
 import escape from "escape-html";
 
+// TODO: Outward edges should be ordered (https://github.com/dagrejs/dagre/issues/112)
+// Maybe show warning in meantime if node has multiple unlabeled outward edges
+
 export class GraphOutputPaneProvider implements OutputPaneProvider<api.Graph> {
   _webviewProvider: WebviewProvider = new WebviewProvider();
 
@@ -107,29 +110,43 @@ export class GraphOutputPaneProvider implements OutputPaneProvider<api.Graph> {
     nodes: { id: string; labelHtml: string }[];
     edges: { name: string; fromId: string; toId: string; labelHtml: string }[];
   } {
+    // Sort in case user's code is nondeterministic
+    const sortedNodes = Array.from(content.nodes);
+    sortedNodes.sort((node1, node2) => node1.id.localeCompare(node2.id));
+    const sortedEdges = Array.from(content.edges);
+    sortedEdges.sort(
+      (edge1, edge2) =>
+        edge1.fromId.localeCompare(edge2.fromId) ||
+        edge1.toId.localeCompare(edge2.toId)
+    );
+
     // Create missing nodes required by edges
-    const nodesById: { [key: string]: api.GraphNode } = {};
-    for (const edge of content.edges) {
-      for (const id of [edge.fromId, edge.toId]) {
-        nodesById[id] = { id, label: null };
+    const allNodes = [];
+    const allNodeIds: Set<string> = new Set();
+    for (const node of sortedNodes) {
+      if (!allNodeIds.has(node.id)) {
+        allNodeIds.add(node.id);
+        allNodes.push(node);
       }
     }
-    for (const node of content.nodes) {
-      nodesById[node.id] = node;
+    for (const edge of sortedEdges) {
+      for (const id of [edge.fromId, edge.toId]) {
+        if (!allNodeIds.has(id)) {
+          allNodeIds.add(id);
+          allNodes.push({ id, label: null });
+        }
+      }
     }
 
     // Create nodes
-    const nodes = Object.values(nodesById).map(({ id, label }) => {
+    const nodes = allNodes.map(({ id, label }) => {
       const labelText = label === null ? id : label;
       const labelHtml = `<pre>${escape(labelText)}</pre>`;
-      return {
-        id,
-        labelHtml,
-      };
+      return { id, labelHtml };
     });
 
     // Create edges
-    const edges = content.edges.map(({ fromId, toId, label }, i) => {
+    const edges = sortedEdges.map(({ fromId, toId, label }, i) => {
       const name = `E${i}`;
       const labelHtml = label === null ? "" : `<pre>${escape(label)}</pre>`;
       return { name, fromId, toId, labelHtml };
