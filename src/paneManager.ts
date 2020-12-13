@@ -5,6 +5,7 @@ import * as api from "./api";
 import { TextInputPaneProvider } from "./paneProviders/textInputPaneProvider";
 import { PaneTreeProvider } from "./paneTree";
 import { TreeOutputPaneProvider } from "./paneProviders/treeOutputPaneProvider";
+import { GraphOutputPaneProvider } from "./paneProviders/graphOutputPaneProvider";
 
 export interface OutputPaneProvider<T> {
   register(): vscode.Disposable;
@@ -19,8 +20,12 @@ export class PaneManager {
   _textOutput = new TextOutputPaneProvider();
   _treeOutput = new TreeOutputPaneProvider();
   _textTreeOutput = new TextTreeOutputPaneProvider();
+  _graphOutput = new GraphOutputPaneProvider();
 
-  _nameToType: Map<string, "input" | "text" | "tree" | "textTree"> = new Map();
+  _nameToType: Map<
+    string,
+    "input" | "text" | "tree" | "textTree" | "graph"
+  > = new Map();
 
   constructor() {
     this._nameToType.set("stdin", "input");
@@ -32,7 +37,8 @@ export class PaneManager {
       this._textInput.register(),
       this._textOutput.register(),
       this._treeOutput.register(),
-      this._textTreeOutput.register()
+      this._textTreeOutput.register(),
+      this._graphOutput.register()
     );
   }
 
@@ -51,6 +57,8 @@ export class PaneManager {
         return this._treeOutput.openPane(name);
       case "textTree":
         return this._textTreeOutput.openPane(name);
+      case "graph":
+        return this._graphOutput.openPane(name);
       case undefined:
         throw new Error(`pane name not defined: ${name}`);
       default:
@@ -72,6 +80,12 @@ export class PaneManager {
         break;
       case "textTree":
         this._textTreeOutput.setPaneContent(name, content.data);
+        break;
+      case "graph":
+        this._graphOutput.setPaneContent(name, content.data);
+        break;
+      default:
+        const _checkExhaustive: never = content;
         break;
     }
   }
