@@ -70,7 +70,10 @@ export function activate(context: vscode.ExtensionContext) {
     ]);
   };
 
-  const compile = async (compileCommand: CommandInfo) => {
+  const compileAndRun = async (
+    compileCommand: CommandInfo,
+    runCommand: CommandInfo
+  ) => {
     const workingDir = getWorkingDir();
     if (workingDir === null) {
       return;
@@ -90,17 +93,18 @@ export function activate(context: vscode.ExtensionContext) {
         stdout:
         ${stdout}`
       );
+    } else {
+      await run(runCommand);
     }
   };
 
-  const compileAndRun = async () => {
+  const fullBuildAndRun = async () => {
     switch (config.mode.type) {
       case "runOnSourceEdit":
         await run(config.mode.runCommand);
         break;
       case "compileOnSourceEdit":
-        await compile(config.mode.compileCommand);
-        await run(config.mode.runCommand);
+        await compileAndRun(config.mode.compileCommand, config.mode.runCommand);
         break;
       case "runOnFileChange":
         throw Error("not implemented");
@@ -131,13 +135,13 @@ export function activate(context: vscode.ExtensionContext) {
   });
   vscode.workspace.onDidSaveTextDocument(async (event) => {
     if (!event.uri.scheme.startsWith("deviz-")) {
-      await compileAndRun();
+      await fullBuildAndRun();
     }
   });
 
   context.subscriptions.push(
     vscode.commands.registerCommand("deviz.startSession", async () => {
-      await compileAndRun();
+      await fullBuildAndRun();
     }),
     vscode.commands.registerCommand("deviz.openPane", async (name: string) => {
       await paneManager.openPane(name);
