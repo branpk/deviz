@@ -170,7 +170,12 @@ function mergeContent(
     case "tree":
       return null;
     case "textTree":
-      return null;
+      const trees1 = content1.data;
+      const trees2 = <api.Tree[]>content2.data;
+      return {
+        type: "textTree",
+        data: trees1.concat(trees2),
+      };
     case "graph":
       return null;
     default:

@@ -6,7 +6,7 @@ import { fixTextHighlight, TextContentProvider } from "../textContentProvider";
 const SCHEME = "deviz-output-text-tree";
 
 export class TextTreeOutputPaneProvider
-  implements OutputPaneProvider<api.Tree> {
+  implements OutputPaneProvider<api.Tree[]> {
   _contentProvider = new TextContentProvider();
 
   _nameToUri(name: string): vscode.Uri {
@@ -23,10 +23,10 @@ export class TextTreeOutputPaneProvider
     );
   }
 
-  setPaneContent(name: string, content: api.Tree): void {
+  setPaneContent(name: string, content: api.Tree[]): void {
     this._contentProvider.setFileContent(
       this._nameToUri(name),
-      formatTree(content)
+      content.map((tree) => formatTree(tree)).join("\n")
     );
   }
 
