@@ -1,3 +1,4 @@
+import { AssertionError } from "assert";
 import * as vscode from "vscode";
 import { runCompileCommand, runServerCommand } from "./communication";
 import { CommandInfo, DevizConfig } from "./config";
@@ -8,7 +9,19 @@ import { SCHEME as TEXT_INPUT_SCHEME } from "./paneProviders/textInputPaneProvid
 // TODO: Save stdin across workspace reopen
 // TODO: Save layout across workspace reopen?
 
+let extensionPath: string | null = null;
+
+export function getExtensionPath(): string {
+  if (extensionPath === null) {
+    throw new AssertionError();
+  } else {
+    return extensionPath;
+  }
+}
+
 export function activate(context: vscode.ExtensionContext) {
+  extensionPath = context.extensionPath;
+
   const config: DevizConfig = {
     mode: {
       type: "compileOnSourceEdit",

@@ -1,10 +1,12 @@
 import * as vscode from "vscode";
 
-export class WebviewProvider {
-  _nameToHtml: Map<string, string> = new Map();
-  _htmlChangeEmitters: Map<string, vscode.EventEmitter<string>> = new Map();
+export type Html = string | ((webview: vscode.Webview) => string);
 
-  _getHtmlChangeEmitter(name: string): vscode.EventEmitter<string> {
+export class WebviewProvider {
+  _nameToHtml: Map<string, Html> = new Map();
+  _htmlChangeEmitters: Map<string, vscode.EventEmitter<Html>> = new Map();
+
+  _getHtmlChangeEmitter(name: string): vscode.EventEmitter<Html> {
     let emitter = this._htmlChangeEmitters.get(name);
     if (!emitter) {
       emitter = new vscode.EventEmitter();
@@ -13,7 +15,7 @@ export class WebviewProvider {
     return emitter;
   }
 
-  setHtml(name: string, html: string): void {
+  setHtml(name: string, html: Html): void {
     this._nameToHtml.set(name, html);
     this._getHtmlChangeEmitter(name).fire(html);
   }
@@ -30,13 +32,21 @@ export class WebviewProvider {
     );
     const html = this._nameToHtml.get(name);
     if (html !== undefined) {
-      panel.webview.html = html;
+      this._render(panel.webview, html);
     }
 
     const disposable = this._getHtmlChangeEmitter(name).event((html) => {
-      panel.webview.html = html;
+      this._render(panel.webview, html);
     });
     panel.onDidDispose(disposable.dispose);
+  }
+
+  _render(webview: vscode.Webview, html: Html) {
+    if (typeof html === "string") {
+      webview.html = html;
+    } else {
+      webview.html = html(webview);
+    }
   }
 }
 

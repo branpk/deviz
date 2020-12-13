@@ -58,6 +58,7 @@
 		"vscode-test": "^1.4.1"
 	},
 	"dependencies": {
+		"dagre-d3": "^0.6.4",
 		"escape-html": "^1.0.3"
 	}
 }
