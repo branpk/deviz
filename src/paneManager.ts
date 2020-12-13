@@ -93,6 +93,7 @@ export class PaneManager {
   updateOutputPanes(
     panes: { name: string; content: string | api.PaneContent }[]
   ) {
+    // TODO: Show message if pane changes type but is still open
     // TODO: Validate pane name (no "/" etc) and ensure unique
     for (const { name, content } of panes) {
       this.setOutputPaneContent(name, content);
