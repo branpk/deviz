@@ -122,7 +122,7 @@ function mergePanes(inPanes: api.Pane[]): api.Pane[] {
       } else {
         const errorMsg =
           prevContent.type === pane.content.type
-            ? `${pane.name} built twice. Panes of type ${pane.content.type} can only be built once.`
+            ? `${pane.name} referenced twice. Panes of type ${pane.content.type} can only have one item.`
             : `${pane.name} has conflicting types: ${prevContent.type} and ${pane.content.type}`;
         vscode.window.showWarningMessage(errorMsg);
       }
