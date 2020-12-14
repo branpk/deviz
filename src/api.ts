@@ -5,8 +5,7 @@ export interface Pane {
   content: PaneContent;
 }
 
-// TODO: Allow list of Trees in tree/textTree
-// TODO: Allow list of Graphs in graph (with reused node ids)
+// TODO: Allow list of Trees in tree
 export type PaneContent =
   | { type: "text"; data: Text }
   | { type: "tree"; data: Tree }
