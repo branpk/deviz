@@ -1,5 +1,10 @@
 // TODO: Allow undefined for nullable fields?
 
+export interface Command {
+  index: number;
+  pane: Pane;
+}
+
 export interface Pane {
   name: string;
   content: PaneContent;

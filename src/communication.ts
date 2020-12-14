@@ -94,16 +94,19 @@ function parseStderr(
     remaining = remaining.slice(endMarkerIndex + END_MARKER.length);
   }
 
-  const panes = new Array<api.Pane>().concat(
+  const commands = new Array<api.Command>().concat(
     ...outputChunks.map(parseOutputChunk)
   );
+  const panes = commands
+    .sort((cmd1, cmd2) => cmd1.index - cmd2.index)
+    .map(({ pane }) => pane);
   return {
     strippedStderr,
     panes: mergePanes(panes),
   };
 }
 
-function parseOutputChunk(source: string): api.Pane[] {
+function parseOutputChunk(source: string): api.Command[] {
   // TODO: Validation
   return JSON.parse(source);
 }
