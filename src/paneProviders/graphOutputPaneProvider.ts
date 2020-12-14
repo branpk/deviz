@@ -48,6 +48,7 @@ export class GraphOutputPaneProvider
     const head = `
     <style>
       svg {
+        display: block;
         margin-top: 20px;
       }
       .node rect {

@@ -5,6 +5,8 @@ export interface Pane {
   content: PaneContent;
 }
 
+// TODO: Text should be an array, shown with 1-2 blank lines in between?
+// TODO: Item titles
 export type PaneContent =
   | { type: "text"; data: Text }
   | { type: "tree"; data: Tree[] }
