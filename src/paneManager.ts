@@ -27,8 +27,9 @@ export class PaneManager {
     "input" | "text" | "tree" | "textTree" | "graph"
   > = new Map();
 
-  constructor() {
+  constructor(stdin: string) {
     this._nameToType.set("stdin", "input");
+    this._textInput.overwriteText("stdin", stdin);
   }
 
   register(): vscode.Disposable {

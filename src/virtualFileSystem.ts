@@ -56,6 +56,16 @@ export class VirtualFileSystem implements vscode.FileSystemProvider {
     newUri: vscode.Uri,
     options: { overwrite: boolean }
   ): void | Thenable<void> {}
+
+  overwriteFile(uri: vscode.Uri, content: Uint8Array) {
+    this._getFile(uri).write(content);
+    this._onDidChangeFileEmitter.fire([
+      {
+        type: vscode.FileChangeType.Changed,
+        uri,
+      },
+    ]);
+  }
 }
 
 class VirtualFile {

@@ -36,7 +36,9 @@ export function activate(context: vscode.ExtensionContext) {
     },
   };
 
-  const paneManager = new PaneManager();
+  const paneManager = new PaneManager(
+    context.workspaceState.get("stdin") || ""
+  );
   context.subscriptions.push(paneManager.register());
 
   const getWorkingDir = () => {
@@ -133,8 +135,11 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }
   });
-  vscode.workspace.onDidSaveTextDocument(async (event) => {
-    if (!event.uri.scheme.startsWith("deviz-")) {
+  vscode.workspace.onDidSaveTextDocument(async (document) => {
+    if (document.uri.scheme === TEXT_INPUT_SCHEME) {
+      await context.workspaceState.update("stdin", paneManager.stdinText());
+    }
+    if (!document.uri.scheme.startsWith("deviz-")) {
       await fullBuildAndRun();
     }
   });
