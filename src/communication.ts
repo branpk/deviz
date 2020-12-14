@@ -150,7 +150,7 @@ function mergeContent(
     return null;
   }
   switch (content1.type) {
-    case "text":
+    case "text": {
       const text1 = content1.data;
       const text2 = <api.Text>content2.data;
       return {
@@ -167,22 +167,31 @@ function mergeContent(
           ],
         },
       };
-    case "tree":
-      return null;
-    case "textTree":
+    }
+    case "tree": {
+      const trees1 = content1.data;
+      const trees2 = <api.Tree[]>content2.data;
+      return {
+        type: "tree",
+        data: trees1.concat(trees2),
+      };
+    }
+    case "textTree": {
       const trees1 = content1.data;
       const trees2 = <api.Tree[]>content2.data;
       return {
         type: "textTree",
         data: trees1.concat(trees2),
       };
-    case "graph":
+    }
+    case "graph": {
       const graphs1 = content1.data;
       const graphs2 = <api.Graph[]>content2.data;
       return {
         type: "graph",
         data: graphs1.concat(graphs2),
       };
+    }
     default:
       const _checkExhaustive: never = content1;
       return null;

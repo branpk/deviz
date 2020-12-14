@@ -5,10 +5,9 @@ export interface Pane {
   content: PaneContent;
 }
 
-// TODO: Allow list of Trees in tree
 export type PaneContent =
   | { type: "text"; data: Text }
-  | { type: "tree"; data: Tree }
+  | { type: "tree"; data: Tree[] }
   | { type: "textTree"; data: Tree[] }
   | { type: "graph"; data: Graph[] };
 

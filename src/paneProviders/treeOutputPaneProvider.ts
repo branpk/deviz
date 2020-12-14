@@ -9,15 +9,15 @@ import escape from "escape-html";
 // TODO: (If needed) Only redraw lines that may have been affected by sticky positioning
 // TODO: Try curves instead of straight lines
 
-export class TreeOutputPaneProvider implements OutputPaneProvider<api.Tree> {
+export class TreeOutputPaneProvider implements OutputPaneProvider<api.Tree[]> {
   _webviewProvider: WebviewProvider = new WebviewProvider();
 
   register(): vscode.Disposable {
     return vscode.Disposable.from();
   }
 
-  setPaneContent(name: string, content: api.Tree): void {
-    const html = this._render(name, content);
+  setPaneContent(name: string, content: api.Tree[]): void {
+    const html = this._render(content);
     this._webviewProvider.setHtml(name, html);
   }
 
@@ -25,18 +25,18 @@ export class TreeOutputPaneProvider implements OutputPaneProvider<api.Tree> {
     this._webviewProvider.openWebview(name);
   }
 
-  _render(name: string, content: api.Tree): string {
+  _render(content: api.Tree[]): string {
     const head = `
       <style>
+        body {
+          padding: 0;
+        }
         .lines-container {
           position: absolute;
           top: 0;
           left: 0;
         }
         .root {
-          position: absolute;
-          top: 0;
-          left: 0;
           padding-left: 20px;
           padding-top: 20px;
         }
@@ -72,12 +72,12 @@ export class TreeOutputPaneProvider implements OutputPaneProvider<api.Tree> {
           const linesContainer = document.getElementsByClassName("lines-container")[0];
           linesContainer.innerHTML = "";
 
-          const tree = document.getElementsByClassName("root")[0];
-          const treeRect = tree.getBoundingClientRect();
-          const scrollX = -treeRect.left;
-          const scrollY = -treeRect.top;
-          linesContainer.style.width = treeRect.width;
-          linesContainer.style.height = treeRect.height;
+          const trees = document.getElementsByClassName("trees")[0];
+          const treesRect = trees.getBoundingClientRect();
+          const scrollX = -treesRect.left;
+          const scrollY = -treesRect.top;
+          linesContainer.style.width = treesRect.width + scrollX;
+          linesContainer.style.height = treesRect.height;
 
           const lineColor = getComputedStyle(document.body).getPropertyValue(
             "--vscode-editor-foreground"
@@ -97,7 +97,6 @@ export class TreeOutputPaneProvider implements OutputPaneProvider<api.Tree> {
           function drawSubtreeLines(tree) {
             const treeRect = tree.getBoundingClientRect();
             if (
-              treeRect.right < 0 ||
               treeRect.left > window.innerWidth ||
               treeRect.bottom < 0 ||
               treeRect.top > window.innerHeight
@@ -122,8 +121,9 @@ export class TreeOutputPaneProvider implements OutputPaneProvider<api.Tree> {
             }
           }
 
-          const root = document.getElementsByClassName("tree")[0];
-          drawSubtreeLines(root);
+          for (const root of document.getElementsByClassName("root")) {
+            drawSubtreeLines(root.getElementsByClassName("tree")[0]);
+          }
         }
 
         window.addEventListener("load", drawTreeLines);
@@ -131,9 +131,12 @@ export class TreeOutputPaneProvider implements OutputPaneProvider<api.Tree> {
         window.addEventListener("scroll", drawTreeLines);
       </script>
     `;
+    const roots = content.map(
+      (tree) => `<div class="root">${this._renderTree(tree)}</div>`
+    );
     const body = `
       <svg class="lines-container"></svg>
-      <div class="root">${this._renderTree(content)}</div>
+      <div class="trees">${roots.join("")}</div>
       ${script}
     `;
     return wrapHtml(head, body);
