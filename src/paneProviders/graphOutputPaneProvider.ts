@@ -9,16 +9,16 @@ import escape from "escape-html";
 // TODO: Outward edges should be ordered (https://github.com/dagrejs/dagre/issues/112)
 // Maybe show warning in meantime if node has multiple unlabeled outward edges
 
-export class GraphOutputPaneProvider implements OutputPaneProvider<api.Graph> {
+export class GraphOutputPaneProvider
+  implements OutputPaneProvider<api.Graph[]> {
   _webviewProvider: WebviewProvider = new WebviewProvider();
 
   register(): vscode.Disposable {
     return vscode.Disposable.from();
   }
 
-  setPaneContent(name: string, content: api.Graph): void {
-    const html = (webview: vscode.Webview) =>
-      this._render(name, content, webview);
+  setPaneContent(name: string, content: api.Graph[]): void {
+    const html = (webview: vscode.Webview) => this._render(content, webview);
     this._webviewProvider.setHtml(name, html);
   }
 
@@ -26,7 +26,7 @@ export class GraphOutputPaneProvider implements OutputPaneProvider<api.Graph> {
     this._webviewProvider.openWebview(name);
   }
 
-  _render(name: string, content: api.Graph, webview: vscode.Webview): string {
+  _render(content: api.Graph[], webview: vscode.Webview): string {
     const dagreD3Path = vscode.Uri.file(
       path.join(
         getExtensionPath(),
@@ -42,6 +42,8 @@ export class GraphOutputPaneProvider implements OutputPaneProvider<api.Graph> {
       path.join(getExtensionPath(), "node_modules", "d3", "dist", "d3.min.js")
     );
     const d3Src = webview.asWebviewUri(d3Path);
+
+    const graphs = content.map((graph) => this._createGraph(graph));
 
     const head = `
     <style>
@@ -69,10 +71,9 @@ export class GraphOutputPaneProvider implements OutputPaneProvider<api.Graph> {
     <script src=${dagreD3Src}></script>
     <script src=${d3Src}></script>
     <script>
-      function renderGraph() {
+      function renderGraph(nodes, edges) {
         const g = new dagreD3.graphlib.Graph({ multigraph: true }).setGraph({});
 
-        const { nodes, edges } = ${JSON.stringify(this._createGraph(content))};
         for (const { id, labelHtml } of nodes) {
           g.setNode(id, {
             labelType: "html",
@@ -89,19 +90,25 @@ export class GraphOutputPaneProvider implements OutputPaneProvider<api.Graph> {
         }
 
         const render = new dagreD3.render();
-        const svg = d3.select("svg");
-        svg.append("g");
-        render(d3.select("svg g"), g);
+        const svg = d3.select("body").append("svg");
+        render(svg.append("g"), g);
 
         svg.attr("width", g.graph().width + 50);
         svg.attr("height", g.graph().height + 50);
       }
 
-      window.addEventListener("load", renderGraph);
+      function renderGraphs() {
+        const graphs = ${JSON.stringify(graphs)};
+        for (const { nodes, edges } of graphs) {
+          renderGraph(nodes, edges);
+        }
+      }
+
+      window.addEventListener("load", renderGraphs);
     </script>
     `;
 
-    return wrapHtml(head, `<svg></svg>`);
+    return wrapHtml(head, "");
   }
 
   _createGraph(
@@ -111,6 +118,7 @@ export class GraphOutputPaneProvider implements OutputPaneProvider<api.Graph> {
     edges: { name: string; fromId: string; toId: string; labelHtml: string }[];
   } {
     // Sort in case user's code is nondeterministic
+    // TODO: Either remove or use version sort (maybe add option to api.Graph)
     const sortedNodes = Array.from(content.nodes);
     sortedNodes.sort((node1, node2) => node1.id.localeCompare(node2.id));
     const sortedEdges = Array.from(content.edges);

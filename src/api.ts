@@ -11,7 +11,7 @@ export type PaneContent =
   | { type: "text"; data: Text }
   | { type: "tree"; data: Tree }
   | { type: "textTree"; data: Tree[] }
-  | { type: "graph"; data: Graph };
+  | { type: "graph"; data: Graph[] };
 
 export interface Text {
   text: string;

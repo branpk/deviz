@@ -177,7 +177,12 @@ function mergeContent(
         data: trees1.concat(trees2),
       };
     case "graph":
-      return null;
+      const graphs1 = content1.data;
+      const graphs2 = <api.Graph[]>content2.data;
+      return {
+        type: "graph",
+        data: graphs1.concat(graphs2),
+      };
     default:
       const _checkExhaustive: never = content1;
       return null;
