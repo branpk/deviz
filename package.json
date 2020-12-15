@@ -1,6 +1,6 @@
 {
 	"name": "deviz",
-	"displayName": "Deviz",
+	"displayName": "deviz",
 	"description": "",
 	"version": "0.0.1",
 	"engines": {
@@ -17,14 +17,14 @@
 		"commands": [
 			{
 				"command": "deviz.startSession",
-				"title": "Deviz: Start session"
+				"title": "deviz: Start session"
 			}
 		],
 		"views": {
 			"explorer": [
 				{
 					"id": "devizPanes",
-					"name": "Deviz"
+					"name": "deviz"
 				}
 			]
 		},
@@ -33,7 +33,22 @@
 				"view": "devizPanes",
 				"contents": "[Start session](command:deviz.startSession)"
 			}
-		]
+		],
+		"configuration": {
+			"title": "deviz",
+			"properties": {
+				"deviz.runCommand": {
+					"type": "string",
+					"default": "",
+					"description": "The command to run your program."
+				},
+				"deviz.compileCommand": {
+					"type": "string",
+					"default": "",
+					"description": "The command to compile your program. Optional - if left blank, then the run command should handle any necessary compilation. For a compiled language, using this option may result in better performance when modifying stdin."
+				}
+			}
+		}
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",

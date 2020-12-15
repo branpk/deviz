@@ -1,40 +1,20 @@
-import { AssertionError } from "assert";
 import * as vscode from "vscode";
 import { runCompileCommand, runServerCommand } from "./communication";
-import { CommandInfo, DevizConfig } from "./config";
 import { PaneManager } from "./paneManager";
 import { SCHEME as TEXT_INPUT_SCHEME } from "./paneProviders/textInputPaneProvider";
 
 // TODO: Improve ViewColumn behavior and extract shared open options
-// TODO: Save stdin across workspace reopen
 // TODO: Save layout across workspace reopen?
 
-let extensionPath: string | null = null;
+let extensionPath: string;
 
 export function getExtensionPath(): string {
-  if (extensionPath === null) {
-    throw new AssertionError();
-  } else {
-    return extensionPath;
-  }
+  return extensionPath;
 }
 
 export function activate(context: vscode.ExtensionContext) {
   extensionPath = context.extensionPath;
-
-  const config: DevizConfig = {
-    mode: {
-      type: "compileOnSourceEdit",
-      compileCommand: {
-        command: "cargo build",
-        env: {},
-      },
-      runCommand: {
-        command: "target\\debug\\test-rs.exe",
-        env: {},
-      },
-    },
-  };
+  const config = vscode.workspace.getConfiguration("deviz");
 
   const paneManager = new PaneManager(
     context.workspaceState.get("stdin") || ""
@@ -43,14 +23,22 @@ export function activate(context: vscode.ExtensionContext) {
 
   const getWorkingDir = () => {
     if (!vscode.workspace.workspaceFolders) {
-      vscode.window.showErrorMessage("Deviz: Must have folder open");
+      vscode.window.showErrorMessage("deviz: Must have folder open");
       return null;
     }
     const workspacePath = vscode.workspace.workspaceFolders[0].uri.fsPath;
     return workspacePath;
   };
 
-  const run = async (runCommand: CommandInfo) => {
+  const run = async () => {
+    if (config.runCommand === "") {
+      // TODO: Link to config
+      vscode.window.showErrorMessage(
+        "deviz: Must specify command to run in workspace settings"
+      );
+      return;
+    }
+
     const workingDir = getWorkingDir();
     if (workingDir === null) {
       return;
@@ -61,7 +49,7 @@ export function activate(context: vscode.ExtensionContext) {
     // TODO: Do something with exitCode
     const { stdout, stderr, panes: userPanes } = await runServerCommand(
       workingDir,
-      runCommand,
+      { command: config.runCommand, env: {} },
       stdin
     );
 
@@ -72,66 +60,37 @@ export function activate(context: vscode.ExtensionContext) {
     ]);
   };
 
-  const compileAndRun = async (
-    compileCommand: CommandInfo,
-    runCommand: CommandInfo
-  ) => {
-    const workingDir = getWorkingDir();
-    if (workingDir === null) {
-      return;
-    }
+  const compileAndRun = async () => {
+    if (config.compileCommand !== "") {
+      const workingDir = getWorkingDir();
+      if (workingDir === null) {
+        return;
+      }
 
-    const { exitCode, stdout, stderr } = await runCompileCommand(
-      workingDir,
-      compileCommand
-    );
+      const { exitCode, stdout, stderr } = await runCompileCommand(workingDir, {
+        command: config.compileCommand,
+        env: {},
+      });
 
-    if (exitCode !== 0) {
-      paneManager.setOutputPaneContent(
-        "stderr",
-        `${compileCommand.command} exited with status ${exitCode}
-        stderr:
-        ${stderr}
-        stdout:
-        ${stdout}`
-      );
-    } else {
-      await run(runCommand);
+      if (exitCode !== 0) {
+        paneManager.setOutputPaneContent(
+          "stderr",
+          `${config.compileCommand} exited with status ${exitCode}
+          stderr:
+          ${stderr}
+          stdout:
+          ${stdout}`
+        );
+        return;
+      }
     }
-  };
-
-  const fullBuildAndRun = async () => {
-    switch (config.mode.type) {
-      case "runOnSourceEdit":
-        await run(config.mode.runCommand);
-        break;
-      case "compileOnSourceEdit":
-        await compileAndRun(config.mode.compileCommand, config.mode.runCommand);
-        break;
-      case "runOnFileChange":
-        throw Error("not implemented");
-      default:
-        const _checkExhaustive: never = config.mode;
-        break;
-    }
+    await run();
   };
 
   vscode.workspace.onDidChangeTextDocument(async (event) => {
     if (event.document.uri.scheme === TEXT_INPUT_SCHEME) {
       if (event.contentChanges.length > 0) {
-        switch (config.mode.type) {
-          case "runOnSourceEdit":
-            await run(config.mode.runCommand);
-            break;
-          case "compileOnSourceEdit":
-            await run(config.mode.runCommand);
-            break;
-          case "runOnFileChange":
-            throw Error("not implemented");
-          default:
-            const _checkExhaustive: never = config.mode;
-            break;
-        }
+        await run();
       }
     }
   });
@@ -140,13 +99,13 @@ export function activate(context: vscode.ExtensionContext) {
       await context.workspaceState.update("stdin", paneManager.stdinText());
     }
     if (!document.uri.scheme.startsWith("deviz-")) {
-      await fullBuildAndRun();
+      await compileAndRun();
     }
   });
 
   context.subscriptions.push(
     vscode.commands.registerCommand("deviz.startSession", async () => {
-      await fullBuildAndRun();
+      await compileAndRun();
     }),
     vscode.commands.registerCommand("deviz.openPane", async (name: string) => {
       await paneManager.openPane(name);

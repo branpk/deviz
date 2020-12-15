@@ -1,8 +1,12 @@
 import { spawn } from "child_process";
-import { CommandInfo } from "./config";
 import * as api from "./api";
 import { assert } from "console";
 import * as vscode from "vscode";
+
+export interface CommandInfo {
+  command: string;
+  env: NodeJS.ProcessEnv;
+}
 
 export interface ProgramOutput {
   exitCode: number;
