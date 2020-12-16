@@ -32,11 +32,11 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   const run = async () => {
-    const runCommand: string = getConfig().runCommand;
+    const runCommand: string = getConfig().runCommand.trim();
     if (runCommand === "") {
-      // TODO: Link to config
-      vscode.window.showErrorMessage(
-        "deviz: Must specify command to run in workspace settings"
+      // TODO: Link to setting
+      paneManager.setInfoText(
+        "To get started, edit the deviz: Run Command workspace setting."
       );
       return;
     }
@@ -76,7 +76,7 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   const compileAndRun = async () => {
-    const compileCommand: string = getConfig().compileCommand;
+    const compileCommand: string = getConfig().compileCommand.trim();
     if (compileCommand !== "") {
       const workingDir = getWorkingDir();
       if (workingDir === null) {
