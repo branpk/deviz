@@ -98,9 +98,20 @@ function parseStderr(
     remaining = remaining.slice(endMarkerIndex + END_MARKER.length);
   }
 
-  const commands = new Array<api.Command>().concat(
-    ...outputChunks.map(parseOutputChunk)
-  );
+  const commands = [];
+  let errorShown = false;
+  for (const chunk of outputChunks) {
+    const result = api.parseCommands(chunk);
+    if (typeof result === "string") {
+      if (!errorShown) {
+        errorShown = true;
+        vscode.window.showErrorMessage(result);
+      }
+    } else {
+      commands.push(...result);
+    }
+  }
+
   const panes = commands
     .sort((cmd1, cmd2) => cmd1.index - cmd2.index)
     .map(({ pane }) => pane);
@@ -108,11 +119,6 @@ function parseStderr(
     strippedStderr,
     panes: mergePanes(panes),
   };
-}
-
-function parseOutputChunk(source: string): api.Command[] {
-  // TODO: Validation
-  return JSON.parse(source);
 }
 
 function mergePanes(inPanes: api.Pane[]): api.Pane[] {
