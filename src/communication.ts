@@ -1,6 +1,5 @@
 import { spawn } from "child_process";
 import * as api from "./api";
-import { assert } from "console";
 import * as vscode from "vscode";
 
 export interface CommandInfo {
@@ -15,6 +14,7 @@ export interface ProgramOutput {
 }
 
 export interface ServerOutput extends ProgramOutput {
+  validationErrors: string[];
   panes: api.Pane[];
 }
 
@@ -37,8 +37,10 @@ export async function runServerCommand(
     { command, env: { ...env, ["DEVIZ_SERVER"]: "1" } },
     stdin
   );
-  const { strippedStderr, panes } = parseStderr(output.stderr);
-  return { ...output, stderr: strippedStderr, panes };
+  const { validationErrors, strippedStderr, panes } = parseStderr(
+    output.stderr
+  );
+  return { ...output, stderr: strippedStderr, validationErrors, panes };
 }
 
 function runCommand(
@@ -77,9 +79,10 @@ const END_MARKER = "|DEVIZ:END|";
 
 function parseStderr(
   stderr: string
-): { strippedStderr: string; panes: api.Pane[] } {
+): { validationErrors: string[]; strippedStderr: string; panes: api.Pane[] } {
+  const validationErrors = [];
   let strippedStderr = "";
-  let outputChunks = [];
+  const outputChunks = [];
 
   let remaining = stderr;
   while (true) {
@@ -91,39 +94,45 @@ function parseStderr(
 
     strippedStderr += remaining.slice(0, beginMarkerIndex);
     remaining = remaining.slice(beginMarkerIndex + BEGIN_MARKER.length);
+
     const endMarkerIndex = remaining.indexOf(END_MARKER);
-    // TODO: Better error handling
-    assert(endMarkerIndex >= 0);
+    if (endMarkerIndex < 0) {
+      continue;
+    }
+
     outputChunks.push(remaining.slice(0, endMarkerIndex));
     remaining = remaining.slice(endMarkerIndex + END_MARKER.length);
   }
 
   const commands = [];
-  let errorShown = false;
   for (const chunk of outputChunks) {
     const result = api.parseCommands(chunk);
     if (typeof result === "string") {
-      if (!errorShown) {
-        errorShown = true;
-        vscode.window.showErrorMessage(result);
+      if (validationErrors.length === 0) {
+        validationErrors.push(`deviz API error: ${result}`);
       }
     } else {
       commands.push(...result);
     }
   }
 
-  const panes = commands
+  const inPanes = commands
     .sort((cmd1, cmd2) => cmd1.index - cmd2.index)
     .map(({ pane }) => pane);
+  let { paneErrors, outPanes } = mergePanes(inPanes);
   return {
+    validationErrors: validationErrors.concat(paneErrors),
     strippedStderr,
-    panes: mergePanes(panes),
+    panes: outPanes,
   };
 }
 
-function mergePanes(inPanes: api.Pane[]): api.Pane[] {
+function mergePanes(
+  inPanes: api.Pane[]
+): { paneErrors: string[]; outPanes: api.Pane[] } {
   // TODO: Validate pane name (no "/" etc)
   // TODO: Check that built-in names aren't used (stdin, stdout, stderr)
+  const paneErrors: string[] = [];
   const orderedPanes: string[] = [];
   const paneContent: Map<string, api.PaneContent> = new Map();
 
@@ -138,7 +147,7 @@ function mergePanes(inPanes: api.Pane[]): api.Pane[] {
           prevContent.type === pane.content.type
             ? `${pane.name} referenced twice. Panes of type ${pane.content.type} can only have one item.`
             : `${pane.name} has conflicting types: ${prevContent.type} and ${pane.content.type}`;
-        vscode.window.showWarningMessage(errorMsg);
+        paneErrors.push(errorMsg);
       }
     } else {
       orderedPanes.push(pane.name);
@@ -153,7 +162,7 @@ function mergePanes(inPanes: api.Pane[]): api.Pane[] {
       outPanes.push({ name, content });
     }
   }
-  return outPanes;
+  return { paneErrors, outPanes };
 }
 
 function mergeContent(

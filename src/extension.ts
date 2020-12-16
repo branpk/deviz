@@ -53,6 +53,7 @@ export function activate(context: vscode.ExtensionContext) {
       exitCode,
       stdout,
       stderr,
+      validationErrors,
       panes: userPanes,
     } = await runServerCommand(
       workingDir,
@@ -60,12 +61,14 @@ export function activate(context: vscode.ExtensionContext) {
       stdin
     );
 
-    if (exitCode === 0) {
-      paneManager.setInfoText(`${runCommand} exited with status ${exitCode}`);
-    } else {
+    if (exitCode !== 0) {
       paneManager.setInfoText(
         `${runCommand} exited with status ${exitCode}:\n${stderr}\nstdout:\n${stdout}`
       );
+    } else if (validationErrors.length > 0) {
+      paneManager.setInfoText(validationErrors.join("\n"));
+    } else {
+      paneManager.setInfoText(`${runCommand} exited with status ${exitCode}`);
     }
 
     paneManager.updateOutputPanes([
