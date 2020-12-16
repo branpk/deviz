@@ -14,12 +14,13 @@ export function getExtensionPath(): string {
 
 export function activate(context: vscode.ExtensionContext) {
   extensionPath = context.extensionPath;
-  const config = vscode.workspace.getConfiguration("deviz");
 
   const paneManager = new PaneManager(
     context.workspaceState.get("stdin") || ""
   );
   context.subscriptions.push(paneManager.register());
+
+  const getConfig = () => vscode.workspace.getConfiguration("deviz");
 
   const getWorkingDir = () => {
     if (!vscode.workspace.workspaceFolders) {
@@ -31,7 +32,8 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   const run = async () => {
-    if (config.runCommand === "") {
+    const runCommand: string = getConfig().runCommand;
+    if (runCommand === "") {
       // TODO: Link to config
       vscode.window.showErrorMessage(
         "deviz: Must specify command to run in workspace settings"
@@ -46,7 +48,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     const stdin = paneManager.stdinText();
 
-    paneManager.setInfoText(`Running ${config.runCommand}...`);
+    paneManager.setInfoText(`Running ${runCommand}...`);
     const {
       exitCode,
       stdout,
@@ -54,17 +56,15 @@ export function activate(context: vscode.ExtensionContext) {
       panes: userPanes,
     } = await runServerCommand(
       workingDir,
-      { command: config.runCommand, env: {} },
+      { command: runCommand, env: {} },
       stdin
     );
 
     if (exitCode === 0) {
-      paneManager.setInfoText(
-        `${config.runCommand} exited with status ${exitCode}`
-      );
+      paneManager.setInfoText(`${runCommand} exited with status ${exitCode}`);
     } else {
       paneManager.setInfoText(
-        `${config.runCommand} exited with status ${exitCode}:\n${stderr}\nstdout:\n${stdout}`
+        `${runCommand} exited with status ${exitCode}:\n${stderr}\nstdout:\n${stdout}`
       );
     }
 
@@ -76,25 +76,26 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   const compileAndRun = async () => {
-    if (config.compileCommand !== "") {
+    const compileCommand: string = getConfig().compileCommand;
+    if (compileCommand !== "") {
       const workingDir = getWorkingDir();
       if (workingDir === null) {
         return;
       }
 
+      paneManager.setInfoText(`Compiling with ${compileCommand}...`);
       const { exitCode, stdout, stderr } = await runCompileCommand(workingDir, {
-        command: config.compileCommand,
+        command: compileCommand,
         env: {},
       });
 
-      if (exitCode !== 0) {
-        paneManager.setOutputPaneContent(
-          "stderr",
-          `${config.compileCommand} exited with status ${exitCode}
-          stderr:
-          ${stderr}
-          stdout:
-          ${stdout}`
+      if (exitCode === 0) {
+        paneManager.setInfoText(
+          `${compileCommand} exited with status ${exitCode}`
+        );
+      } else {
+        paneManager.setInfoText(
+          `${compileCommand} exited with status ${exitCode}:\n${stderr}\nstdout:\n${stdout}`
         );
         return;
       }

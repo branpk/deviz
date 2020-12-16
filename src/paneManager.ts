@@ -32,6 +32,8 @@ export class PaneManager {
 
     this._nameToType.set("stdin", "input");
     this._textInput.overwriteText("stdin", stdin);
+
+    this._paneTree.setPanes(["info"]);
   }
 
   register(): vscode.Disposable {
