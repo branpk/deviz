@@ -123,6 +123,7 @@ function parseStderr(
 
 function mergePanes(inPanes: api.Pane[]): api.Pane[] {
   // TODO: Validate pane name (no "/" etc)
+  // TODO: Check that built-in names aren't used (stdin, stdout, stderr)
   const orderedPanes: string[] = [];
   const paneContent: Map<string, api.PaneContent> = new Map();
 
