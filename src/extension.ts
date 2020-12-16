@@ -46,12 +46,27 @@ export function activate(context: vscode.ExtensionContext) {
 
     const stdin = paneManager.stdinText();
 
-    // TODO: Do something with exitCode
-    const { stdout, stderr, panes: userPanes } = await runServerCommand(
+    paneManager.setInfoText(`Running ${config.runCommand}...`);
+    const {
+      exitCode,
+      stdout,
+      stderr,
+      panes: userPanes,
+    } = await runServerCommand(
       workingDir,
       { command: config.runCommand, env: {} },
       stdin
     );
+
+    if (exitCode === 0) {
+      paneManager.setInfoText(
+        `${config.runCommand} exited with status ${exitCode}`
+      );
+    } else {
+      paneManager.setInfoText(
+        `${config.runCommand} exited with status ${exitCode}:\n${stderr}\nstdout:\n${stdout}`
+      );
+    }
 
     paneManager.updateOutputPanes([
       { name: "stdout", content: stdout },

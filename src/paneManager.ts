@@ -28,6 +28,8 @@ export class PaneManager {
   > = new Map();
 
   constructor(stdin: string) {
+    this._nameToType.set("info", "text");
+
     this._nameToType.set("stdin", "input");
     this._textInput.overwriteText("stdin", stdin);
   }
@@ -41,6 +43,10 @@ export class PaneManager {
       this._textTreeOutput.register(),
       this._graphOutput.register()
     );
+  }
+
+  setInfoText(text: string) {
+    this._textOutput.setPaneContent("info", { text, hovers: [] });
   }
 
   stdinText(): string {
@@ -98,7 +104,11 @@ export class PaneManager {
     for (const { name, content } of panes) {
       this.setOutputPaneContent(name, content);
     }
-    this._paneTree.setPanes(["stdin", ...panes.map(({ name }) => name)]);
+    this._paneTree.setPanes([
+      "info",
+      "stdin",
+      ...panes.map(({ name }) => name),
+    ]);
   }
 }
 
