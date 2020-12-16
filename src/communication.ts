@@ -1,6 +1,6 @@
 import { spawn } from "child_process";
 import * as api from "./api";
-import * as vscode from "vscode";
+import treeKill from "tree-kill";
 
 export interface CommandInfo {
   command: string;
@@ -23,38 +23,50 @@ export interface ServerOutput extends ProgramOutput {
 export function runCompileCommand(
   workingDir: string,
   command: CommandInfo
-): Promise<ProgramOutput> {
+): { promise: Promise<ProgramOutput>; cancel: () => Promise<void> } {
   return runCommand(workingDir, command, "");
 }
 
-export async function runServerCommand(
+export function runServerCommand(
   workingDir: string,
   { command, env }: CommandInfo,
   stdin: string
-): Promise<ServerOutput> {
-  const output = await runCommand(
+): { promise: Promise<ServerOutput>; cancel: () => Promise<void> } {
+  const { promise, cancel } = runCommand(
     workingDir,
     { command, env: { ...env, ["DEVIZ_SERVER"]: "1" } },
     stdin
   );
-  const { validationErrors, strippedStderr, panes } = parseStderr(
-    output.stderr
-  );
-  return { ...output, stderr: strippedStderr, validationErrors, panes };
+
+  const toServerOutput = async (): Promise<ServerOutput> => {
+    const output = await promise;
+    const { validationErrors, strippedStderr, panes } = parseStderr(
+      output.stderr
+    );
+    return { ...output, stderr: strippedStderr, validationErrors, panes };
+  };
+
+  return { promise: toServerOutput(), cancel };
 }
 
 function runCommand(
   workingDir: string,
   { command, env }: CommandInfo,
   stdin: string
-): Promise<ProgramOutput> {
-  return new Promise((resolve) => {
-    const process = spawn(command, {
-      cwd: workingDir,
-      shell: true,
-      env,
-    });
+): { promise: Promise<ProgramOutput>; cancel: () => Promise<void> } {
+  const process = spawn(command, {
+    cwd: workingDir,
+    shell: true,
+    env,
+  });
 
+  let canceled = false;
+  const cancel = (): Promise<void> => {
+    canceled = true;
+    return new Promise((resolve) => treeKill(process.pid, () => resolve()));
+  };
+
+  const promise: Promise<ProgramOutput> = new Promise((resolve, reject) => {
     process.stdin.write(stdin);
     process.stdin.end();
 
@@ -69,9 +81,15 @@ function runCommand(
     });
 
     process.on("close", (exitCode) => {
-      resolve({ exitCode, stdout, stderr });
+      if (canceled) {
+        reject("killed");
+      } else {
+        resolve({ exitCode, stdout, stderr });
+      }
     });
   });
+
+  return { promise, cancel };
 }
 
 const BEGIN_MARKER = "|DEVIZ:BEGIN|";

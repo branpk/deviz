@@ -2,9 +2,39 @@ import * as vscode from "vscode";
 import { runCompileCommand, runServerCommand } from "./communication";
 import { PaneManager } from "./paneManager";
 import { SCHEME as TEXT_INPUT_SCHEME } from "./paneProviders/textInputPaneProvider";
+import { Mutex } from "async-mutex";
 
 // TODO: Improve ViewColumn behavior and extract shared open options
 // TODO: Save layout across workspace reopen?
+
+class ProcessLock {
+  mutex = new Mutex();
+  cancelRunningProcess: null | (() => Promise<void>) = null;
+
+  async killExistingAndRun<T>(
+    spawnProcess: () => { promise: Promise<T>; cancel: () => Promise<void> }
+  ): Promise<T> {
+    const release = await this.mutex.acquire();
+    try {
+      if (this.cancelRunningProcess !== null) {
+        await this.cancelRunningProcess();
+        this.cancelRunningProcess = null;
+      }
+
+      const { promise, cancel } = spawnProcess();
+
+      let finished = false;
+      this.cancelRunningProcess = async () => {
+        if (!finished) {
+          await cancel();
+        }
+      };
+      return promise.finally(() => (finished = true));
+    } finally {
+      release();
+    }
+  }
+}
 
 let extensionPath: string;
 
@@ -31,6 +61,8 @@ export function activate(context: vscode.ExtensionContext) {
     return workspacePath;
   };
 
+  const lock = new ProcessLock();
+
   const run = async () => {
     const runCommand: string = getConfig().runCommand.trim();
     if (runCommand === "") {
@@ -55,10 +87,8 @@ export function activate(context: vscode.ExtensionContext) {
       stderr,
       validationErrors,
       panes: userPanes,
-    } = await runServerCommand(
-      workingDir,
-      { command: runCommand, env: {} },
-      stdin
+    } = await lock.killExistingAndRun(() =>
+      runServerCommand(workingDir, { command: runCommand, env: {} }, stdin)
     );
 
     if (exitCode !== 0) {
@@ -87,10 +117,12 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       paneManager.setInfoText(`Compiling with ${compileCommand}...`);
-      const { exitCode, stdout, stderr } = await runCompileCommand(workingDir, {
-        command: compileCommand,
-        env: {},
-      });
+      const { exitCode, stdout, stderr } = await lock.killExistingAndRun(() =>
+        runCompileCommand(workingDir, {
+          command: compileCommand,
+          env: {},
+        })
+      );
 
       if (exitCode === 0) {
         paneManager.setInfoText(
