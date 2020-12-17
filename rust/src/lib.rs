@@ -1,7 +1,7 @@
 //! # deviz
 //!
 //! deviz is a VS Code extension that displays structured program output such as trees and graphs.
-//! This crate allows Rust code to produce output that can be read by the deviz VS Code extension.
+//! This crate allows Rust code to produce output that can be read by this extension.
 //!
 //! To use this crate, call one of the [top level output functions](#functions).
 //!
