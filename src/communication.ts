@@ -18,8 +18,6 @@ export interface ServerOutput extends ProgramOutput {
   panes: api.Pane[];
 }
 
-// TODO: Kill process if still running
-
 export function runCompileCommand(
   workingDir: string,
   command: CommandInfo

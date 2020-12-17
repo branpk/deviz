@@ -34,6 +34,13 @@ class ProcessLock {
       release();
     }
   }
+
+  async killRemaining() {
+    if (this.cancelRunningProcess !== null) {
+      await this.cancelRunningProcess();
+      this.cancelRunningProcess = null;
+    }
+  }
 }
 
 let extensionPath: string;
@@ -62,6 +69,11 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   const lock = new ProcessLock();
+  context.subscriptions.push(
+    new vscode.Disposable(() => {
+      lock.killRemaining();
+    })
+  );
 
   const run = async () => {
     const runCommand: string = getConfig().runCommand.trim();
