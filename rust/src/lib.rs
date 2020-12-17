@@ -1,6 +1,35 @@
-#![warn(rust_2018_idioms)]
-#![warn(missing_debug_implementations)]
-#![warn(missing_docs)]
+//! # deviz
+//!
+//! deviz is a VS Code extension that displays structured program output such as
+//! trees and graphs.
+//! This crate allows Rust code to produce output that can be read by the deviz
+//! VS Code extension.
+//!
+//! # Examples
+//!
+//! ```
+//! let mut tree = deviz::tree("ast");
+//! tree.begin_node();
+//! tree.label("+");
+//! {
+//!     tree.begin_node();
+//!     tree.label("1");
+//!     tree.end_node();
+//! }
+//! {
+//!     tree.begin_node();
+//!     tree.label("2");
+//!     tree.end_node();
+//! }
+//! tree.end_node();
+//!
+//! let mut text = deviz::text("types", "x + y");
+//! text.hover_text(0..1, "Int");
+//! text.hover_text(4..5, "Bool");
+//! text.hover_text(0..5, "Error");
+//! ```
+
+#![warn(missing_debug_implementations, missing_docs)]
 
 use std::{
     env,
@@ -16,7 +45,7 @@ fn next_command_index() -> usize {
     COMMAND_INDEX.fetch_add(1, Ordering::SeqCst)
 }
 
-fn send_command(command: api::CommandJson) {
+fn send_command(command: api::Command) {
     if let Ok(value) = env::var("DEVIZ_SERVER") {
         if value.trim() == "1" {
             let json_text = serde_json::to_string(&vec![command]).unwrap();
@@ -25,19 +54,19 @@ fn send_command(command: api::CommandJson) {
     }
 }
 
-pub fn text(pane_name: impl Into<String>, text: impl Into<String>) -> TextBuilder {
-    TextBuilder::new(next_command_index(), pane_name.into(), text.into())
+pub fn text(pane_name: impl Into<String>, text: impl Into<String>) -> Text {
+    Text::new(next_command_index(), pane_name.into(), text.into())
 }
 
 #[derive(Debug)]
-pub struct TextBuilder {
+pub struct Text {
     command_index: usize,
     pane_name: String,
     text: String,
-    hovers: Vec<api::HoverJson>,
+    hovers: Vec<api::Hover>,
 }
 
-impl TextBuilder {
+impl Text {
     fn new(command_index: usize, pane_name: String, text: String) -> Self {
         Self {
             command_index,
@@ -47,12 +76,12 @@ impl TextBuilder {
         }
     }
 
-    fn json(&self) -> api::CommandJson {
-        api::CommandJson {
+    fn json(&self) -> api::Command {
+        api::Command {
             index: self.command_index,
-            pane: api::PaneJson {
+            pane: api::Pane {
                 name: self.pane_name.clone(),
-                content: api::PaneContentJson::Text(api::TextJson {
+                content: api::PaneContent::Text(api::Text {
                     text: self.text.clone(),
                     hovers: self.hovers.clone(),
                 }),
@@ -61,7 +90,7 @@ impl TextBuilder {
     }
 
     pub fn hover_text(&mut self, range: Range<usize>, text: impl Into<String>) {
-        self.hovers.push(api::HoverJson {
+        self.hovers.push(api::Hover {
             start: range.start,
             end: range.end,
             text: text.into(),
@@ -69,18 +98,18 @@ impl TextBuilder {
     }
 }
 
-impl Drop for TextBuilder {
+impl Drop for Text {
     fn drop(&mut self) {
         send_command(self.json());
     }
 }
 
-pub fn tree(pane_name: impl Into<String>) -> TreeBuilder {
-    TreeBuilder::new(next_command_index(), pane_name.into(), TreeKind::Tree)
+pub fn tree(pane_name: impl Into<String>) -> Tree {
+    Tree::new(next_command_index(), pane_name.into(), TreeKind::Tree)
 }
 
-pub fn text_tree(pane_name: impl Into<String>) -> TreeBuilder {
-    TreeBuilder::new(next_command_index(), pane_name.into(), TreeKind::TextTree)
+pub fn text_tree(pane_name: impl Into<String>) -> Tree {
+    Tree::new(next_command_index(), pane_name.into(), TreeKind::TextTree)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -90,15 +119,15 @@ enum TreeKind {
 }
 
 #[derive(Debug)]
-pub struct TreeBuilder {
+pub struct Tree {
     command_index: usize,
     pane_name: String,
     kind: TreeKind,
-    roots: Vec<api::TreeJson>,
-    stack: Vec<api::TreeJson>,
+    roots: Vec<api::Tree>,
+    stack: Vec<api::Tree>,
 }
 
-impl TreeBuilder {
+impl Tree {
     fn new(command_index: usize, pane_name: String, kind: TreeKind) -> Self {
         Self {
             command_index,
@@ -109,25 +138,25 @@ impl TreeBuilder {
         }
     }
 
-    fn json(&mut self) -> api::CommandJson {
+    fn json(&mut self) -> api::Command {
         // Implicitly close tree
         while !self.stack.is_empty() {
             self.end_node();
         }
-        api::CommandJson {
+        api::Command {
             index: self.command_index,
-            pane: api::PaneJson {
+            pane: api::Pane {
                 name: self.pane_name.clone(),
                 content: match self.kind {
-                    TreeKind::Tree => api::PaneContentJson::Tree(self.roots.clone()),
-                    TreeKind::TextTree => api::PaneContentJson::TextTree(self.roots.clone()),
+                    TreeKind::Tree => api::PaneContent::Tree(self.roots.clone()),
+                    TreeKind::TextTree => api::PaneContent::TextTree(self.roots.clone()),
                 },
             },
         }
     }
 
     pub fn begin_node(&mut self) {
-        self.stack.push(api::TreeJson {
+        self.stack.push(api::Tree {
             label: None,
             children: Vec::new(),
         });
@@ -153,25 +182,25 @@ impl TreeBuilder {
     }
 }
 
-impl Drop for TreeBuilder {
+impl Drop for Tree {
     fn drop(&mut self) {
         send_command(self.json());
     }
 }
 
-pub fn graph(pane_name: impl Into<String>) -> GraphBuilder {
-    GraphBuilder::new(next_command_index(), pane_name.into())
+pub fn graph(pane_name: impl Into<String>) -> Graph {
+    Graph::new(next_command_index(), pane_name.into())
 }
 
 #[derive(Debug)]
-pub struct GraphBuilder {
+pub struct Graph {
     command_index: usize,
     pane_name: String,
-    nodes: Vec<api::GraphNodeJson>,
-    edges: Vec<api::GraphEdgeJson>,
+    nodes: Vec<api::GraphNode>,
+    edges: Vec<api::GraphEdge>,
 }
 
-impl GraphBuilder {
+impl Graph {
     fn new(command_index: usize, pane_name: String) -> Self {
         Self {
             command_index,
@@ -181,12 +210,12 @@ impl GraphBuilder {
         }
     }
 
-    fn json(&self) -> api::CommandJson {
-        api::CommandJson {
+    fn json(&self) -> api::Command {
+        api::Command {
             index: self.command_index,
-            pane: api::PaneJson {
+            pane: api::Pane {
                 name: self.pane_name.clone(),
-                content: api::PaneContentJson::Graph(vec![api::GraphJson {
+                content: api::PaneContent::Graph(vec![api::Graph {
                     nodes: self.nodes.clone(),
                     edges: self.edges.clone(),
                 }]),
@@ -195,21 +224,21 @@ impl GraphBuilder {
     }
 
     pub fn node(&mut self, id: impl Into<String>) {
-        self.nodes.push(api::GraphNodeJson {
+        self.nodes.push(api::GraphNode {
             id: id.into(),
             label: None,
         });
     }
 
     pub fn node_labeled(&mut self, id: impl Into<String>, label: impl Into<String>) {
-        self.nodes.push(api::GraphNodeJson {
+        self.nodes.push(api::GraphNode {
             id: id.into(),
             label: Some(label.into()),
         });
     }
 
     pub fn edge(&mut self, from_id: impl Into<String>, to_id: impl Into<String>) {
-        self.edges.push(api::GraphEdgeJson {
+        self.edges.push(api::GraphEdge {
             from_id: from_id.into(),
             to_id: to_id.into(),
             label: None,
@@ -222,7 +251,7 @@ impl GraphBuilder {
         to_id: impl Into<String>,
         label: impl Into<String>,
     ) {
-        self.edges.push(api::GraphEdgeJson {
+        self.edges.push(api::GraphEdge {
             from_id: from_id.into(),
             to_id: to_id.into(),
             label: Some(label.into()),
@@ -230,7 +259,7 @@ impl GraphBuilder {
     }
 }
 
-impl Drop for GraphBuilder {
+impl Drop for Graph {
     fn drop(&mut self) {
         send_command(self.json());
     }
