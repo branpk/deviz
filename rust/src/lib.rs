@@ -5,8 +5,8 @@
 //!
 //! To use this crate, call one of the [top level output functions](#functions).
 //!
-//! These functions take a `pane_name` argument, which specifies the name of the tab that the output
-//! will be displayed.
+//! These functions take a `pane_name` argument, which specifies the name of the tab where the
+//! output will be displayed.
 //! The same output function can be called multiple times with the same pane name, but combining
 //! different types of output into the same pane won't work.
 //!
@@ -254,6 +254,8 @@ impl Drop for Tree {
 }
 
 /// A directed graph. Returns [`Graph`](Graph).
+///
+/// See [crate level documentation](crate) for an explanation of `pane_name`.
 pub fn graph(pane_name: impl Into<String>) -> Graph {
     Graph::new(next_command_index(), pane_name.into())
 }
