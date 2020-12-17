@@ -92,10 +92,13 @@ export class GraphOutputPaneProvider
 
         const render = new dagreD3.render();
         const svg = d3.select("body").append("svg");
-        render(svg.append("g"), g);
+        const svgGroup = svg.append("g");
+        render(svgGroup, g);
 
-        svg.attr("width", g.graph().width + 50);
-        svg.attr("height", g.graph().height + 50);
+        svg.attr("width", g.graph().width + 100);
+        svg.attr("height", g.graph().height + 100);
+        const offset = (svg.attr("width") - g.graph().width) / 2;
+        svgGroup.attr("transform", "translate(" + offset + ", 0)");
       }
 
       function renderGraphs() {
