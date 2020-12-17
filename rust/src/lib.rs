@@ -1,9 +1,18 @@
 //! # deviz
 //!
-//! deviz is a VS Code extension that displays structured program output such as
-//! trees and graphs.
-//! This crate allows Rust code to produce output that can be read by the deviz
-//! VS Code extension.
+//! deviz is a VS Code extension that displays structured program output such as trees and graphs.
+//! This crate allows Rust code to produce output that can be read by the deviz VS Code extension.
+//!
+//! To use this crate, call one of the [top level output functions](#functions).
+//!
+//! These functions take a `pane_name` argument, which specifies the name of the tab that the output
+//! will be displayed.
+//! The same output function can be called multiple times with the same pane name, but combining
+//! different types of output into the same pane won't work.
+//!
+//! The functions each return a builder object that is used for constructing the output.
+//! The output data is automatically sent to the VS Code extension when this builder object is
+//! dropped.
 //!
 //! # Examples
 //!
@@ -54,10 +63,23 @@ fn send_command(command: api::Command) {
     }
 }
 
+/// Text, with the option of adding hover text. Returns [`Text`](Text).
+///
+/// See [crate level documentation](crate) for an explanation of `pane_name`.
 pub fn text(pane_name: impl Into<String>, text: impl Into<String>) -> Text {
     Text::new(next_command_index(), pane_name.into(), text.into())
 }
 
+/// A builder for text output. Construct using [`deviz::text`](text).
+///
+/// # Examples
+///
+/// ```
+/// let mut text = deviz::text("3 * 4");
+/// text.hover_text(0..1, "3");
+/// text.hover_text(4..5, "4");
+/// text.hover_text(0..5, "12");
+/// ```
 #[derive(Debug)]
 pub struct Text {
     command_index: usize,
@@ -89,6 +111,7 @@ impl Text {
         }
     }
 
+    /// Add hover text to the given byte range.
     pub fn hover_text(&mut self, range: Range<usize>, text: impl Into<String>) {
         self.hovers.push(api::Hover {
             start: range.start,
@@ -104,10 +127,16 @@ impl Drop for Text {
     }
 }
 
+/// A tree, rendered graphically. Returns [`Tree`](Tree).
+///
+/// See [crate level documentation](crate) for an explanation of `pane_name`.
 pub fn tree(pane_name: impl Into<String>) -> Tree {
     Tree::new(next_command_index(), pane_name.into(), TreeKind::Tree)
 }
 
+/// A tree, printed as indented text. Returns [`Tree`](Tree).
+///
+/// See [crate level documentation](crate) for an explanation of `pane_name`.
 pub fn text_tree(pane_name: impl Into<String>) -> Tree {
     Tree::new(next_command_index(), pane_name.into(), TreeKind::TextTree)
 }
@@ -118,6 +147,27 @@ enum TreeKind {
     TextTree,
 }
 
+/// A builder for tree output. Construct using [`deviz::tree`](tree) or
+/// [`deviz::text_tree`](text_tree).
+///
+/// # Examples
+///
+/// ```
+/// let mut tree = deviz::tree("ast");
+/// tree.begin_node();
+/// tree.label("+");
+/// {
+///     tree.begin_node();
+///     tree.label("1");
+///     tree.end_node();
+/// }
+/// {
+///     tree.begin_node();
+///     tree.label("2");
+///     tree.end_node();
+/// }
+/// tree.end_node();
+/// ```
 #[derive(Debug)]
 pub struct Tree {
     command_index: usize,
@@ -155,6 +205,10 @@ impl Tree {
         }
     }
 
+    /// Begin a new subtree, i.e. a node and all its children.
+    ///
+    /// A call to this function should be paired with a call to [`end_node`](Self::end_node).
+    /// Between these two calls, the node and its children should be built.
     pub fn begin_node(&mut self) {
         self.stack.push(api::Tree {
             label: None,
@@ -162,6 +216,11 @@ impl Tree {
         });
     }
 
+    /// End a subtree. See [`begin_node`](Self::begin_node).
+    ///
+    /// # Panics
+    ///
+    /// Panics if there is no matching [`begin_node`](Self::begin_node) call.
     pub fn end_node(&mut self) {
         let node = self
             .stack
@@ -173,6 +232,12 @@ impl Tree {
         }
     }
 
+    /// Add a label for the current node. By default, a node has no label.
+    ///
+    /// # Panics
+    ///
+    /// This method should be called between a call to [`begin_node`](Self::begin_node) and a call
+    /// to [`end_node`](Self::end_node). Panics otherwise.
     pub fn label(&mut self, label: impl Into<String>) {
         let node = self
             .stack
@@ -188,10 +253,23 @@ impl Drop for Tree {
     }
 }
 
+/// A directed graph. Returns [`Graph`](Graph).
 pub fn graph(pane_name: impl Into<String>) -> Graph {
     Graph::new(next_command_index(), pane_name.into())
 }
 
+/// A builder for directed graph output. Construct using [`deviz::graph`](graph).
+///
+/// # Examples
+///
+/// ```
+/// let mut graph = deviz::graph("g");
+/// graph.node_labeled("root", "ROOT");
+/// graph.node("A");
+/// graph.node("B");
+/// graph.edge("root", "A");
+/// graph.edge_labeled("root", "B", "edge label");
+/// ```
 #[derive(Debug)]
 pub struct Graph {
     command_index: usize,
@@ -223,6 +301,7 @@ impl Graph {
         }
     }
 
+    /// Add a node with the given id. The node's label equals its id.
     pub fn node(&mut self, id: impl Into<String>) {
         self.nodes.push(api::GraphNode {
             id: id.into(),
@@ -230,6 +309,7 @@ impl Graph {
         });
     }
 
+    /// Add a node with the given id and label.
     pub fn node_labeled(&mut self, id: impl Into<String>, label: impl Into<String>) {
         self.nodes.push(api::GraphNode {
             id: id.into(),
@@ -237,6 +317,15 @@ impl Graph {
         });
     }
 
+    /// Define an unlabeled edge from the node with id `from_id` to the node with id `to_id`.
+    ///
+    /// If a node id is used in an edge but there is no corresponding call to [node](Self::node) or
+    /// [node_labeled](Self::node_labeled), then the node will be added automatically.
+    ///
+    /// **Warning:** The order that edges are displayed in the graph is not guaranteed to correspond
+    /// to the order that they were defined.
+    /// This will hopefully change in the future, but for now you should label all edges if their
+    /// order matters.
     pub fn edge(&mut self, from_id: impl Into<String>, to_id: impl Into<String>) {
         self.edges.push(api::GraphEdge {
             from_id: from_id.into(),
@@ -245,6 +334,8 @@ impl Graph {
         });
     }
 
+    /// Define an edge from the node with id `from_id` to the node with id `to_id` with the given
+    /// label.
     pub fn edge_labeled(
         &mut self,
         from_id: impl Into<String>,

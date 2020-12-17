@@ -1,21 +1,8 @@
 fn main() {
-    let mut tree = deviz::tree("ast");
-    tree.begin_node();
-    tree.label("+");
-    {
-        tree.begin_node();
-        tree.label("1");
-        tree.end_node();
-    }
-    {
-        tree.begin_node();
-        tree.label("2");
-        tree.end_node();
-    }
-    tree.end_node();
-
-    let mut text = deviz::text("types", "x + y");
-    text.hover_text(0..1, "Int");
-    text.hover_text(4..5, "Bool");
-    text.hover_text(0..5, "Error");
+    let mut graph = deviz::graph("g");
+    graph.node_labeled("root", "ROOT");
+    graph.node("A");
+    graph.node("B");
+    graph.edge("root", "A");
+    graph.edge_labeled("root", "B", "edge label");
 }
