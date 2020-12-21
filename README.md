@@ -33,7 +33,7 @@ Click `Start session` within this view.
 This view will list all of your input and output panes.
 Click on the `info` pane to view the status of compilation/execution.
 
-Open Workspace Setting and find the deviz settings.
+Open Workspace Settings and find the deviz settings.
 You'll need to at least set the deviz `Run Command` setting, but you may also want to set
 `Compile Command`.
 
