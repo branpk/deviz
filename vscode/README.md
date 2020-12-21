@@ -14,15 +14,15 @@ Currently, only a Rust version of this library is available.
 
 ### Live output
 
-![tree output](../readme_images/tree.gif)
+![tree output](../images/tree.gif)
 
 ### Directed graphs
 
-![graph output](../readme_images/graph.png)
+![graph output](../images/graph.png)
 
 ### Hover text
 
-![hover text](../readme_images/hover.gif)
+![hover text](../images/hover.gif)
 
 ## Extension Setup
 
