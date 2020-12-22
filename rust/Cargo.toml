@@ -4,6 +4,8 @@ version = "0.1.0"
 authors = ["Brandon Pickering <brandonpickering95@gmail.com>"]
 edition = "2018"
 license = "MIT"
+description = "Provides access to a VS Code extension for displaying structured program output"
+repository = "https://github.com/branpk/deviz"
 
 [dependencies]
 serde = { version = "1.0.118", features = ["derive"] }
