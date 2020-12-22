@@ -14,15 +14,15 @@ Currently, only a Rust version of this library is available.
 
 ### Live output
 
-![tree output](../images/tree.gif)
+![tree output](https://github.com/branpk/deviz/raw/main/images/tree.gif)
 
 ### Directed graphs
 
-![graph output](../images/graph.png)
+![graph output](https://github.com/branpk/deviz/raw/main/images/graph.png)
 
 ### Hover text
 
-![hover text](../images/hover.gif)
+![hover text](https://github.com/branpk/deviz/raw/main/images/hover.gif)
 
 ## Extension Setup
 
