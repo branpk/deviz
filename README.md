@@ -8,7 +8,7 @@ a library to communicate the output to deviz.
 Currently, only a Rust version of this library is available.
 
 * [VS Code extension](https://marketplace.visualstudio.com/items?itemName=branpk.deviz)
-* [Rust library](TODO) - [documentation](TODO)
+* [Rust library](https://crates.io/crates/deviz) - [documentation](https://docs.rs/deviz)
 
 ## Features
 
