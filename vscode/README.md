@@ -7,7 +7,7 @@ deviz can show text output for any program, but to show structured output, your 
 a library to communicate the output to deviz.
 Currently, only a Rust version of this library is available.
 
-* [VS Code extension](TODO)
+* [VS Code extension](https://marketplace.visualstudio.com/items?itemName=branpk.deviz)
 * [Rust library](TODO) - [documentation](TODO)
 
 ## Features
@@ -26,7 +26,7 @@ Currently, only a Rust version of this library is available.
 
 ## Extension Setup
 
-Install the [VS Code extension](TODO).
+Install the [VS Code extension](https://marketplace.visualstudio.com/items?itemName=branpk.deviz).
 
 A view will be added to the bottom of the Explorer, titled `DEVIZ`.
 Click `Start session` within this view.
