@@ -3,6 +3,7 @@
 	"displayName": "deviz",
 	"description": "",
 	"version": "0.1.0",
+	"publisher": "branpk",
 	"engines": {
 		"vscode": "^1.51.0"
 	},
