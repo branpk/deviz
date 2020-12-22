@@ -5,6 +5,7 @@
 	"version": "0.1.0",
 	"publisher": "branpk",
 	"repository": "https://github.com/branpk/deviz",
+	"license": "MIT",
 	"engines": {
 		"vscode": "^1.51.0"
 	},
