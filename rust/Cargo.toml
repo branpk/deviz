@@ -8,5 +8,4 @@ description = "Provides access to a VS Code extension for displaying structured 
 repository = "https://github.com/branpk/deviz"
 
 [dependencies]
-serde = { version = "1.0.118", features = ["derive"] }
-serde_json = "1.0.60"
+json = "0.12.4"

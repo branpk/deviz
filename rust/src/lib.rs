@@ -46,7 +46,7 @@ use std::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 
-mod api;
+use json::JsonValue;
 
 static COMMAND_INDEX: AtomicUsize = AtomicUsize::new(0);
 
@@ -54,10 +54,10 @@ fn next_command_index() -> usize {
     COMMAND_INDEX.fetch_add(1, Ordering::SeqCst)
 }
 
-fn send_command(command: api::Command) {
+fn send_command(command: JsonValue) {
     if let Ok(value) = env::var("DEVIZ_SERVER") {
         if value.trim() == "1" {
-            let json_text = serde_json::to_string(&vec![command]).unwrap();
+            let json_text = JsonValue::from(vec![command]).to_string();
             eprint!("|DEVIZ:BEGIN|{}|DEVIZ:END|", json_text);
         }
     }
@@ -85,7 +85,7 @@ pub struct Text {
     command_index: usize,
     pane_name: String,
     text: String,
-    hovers: Vec<api::Hover>,
+    hovers: Vec<Hover>,
 }
 
 impl Text {
@@ -98,22 +98,25 @@ impl Text {
         }
     }
 
-    fn json(&self) -> api::Command {
-        api::Command {
+    fn json(&self) -> JsonValue {
+        json::object! {
             index: self.command_index,
-            pane: api::Pane {
+            pane: {
                 name: self.pane_name.clone(),
-                content: api::PaneContent::Text(api::Text {
-                    text: self.text.clone(),
-                    hovers: self.hovers.clone(),
-                }),
+                content: {
+                    type: "text",
+                    data: {
+                        text: self.text.clone(),
+                        hovers: self.hovers.clone(),
+                    },
+                },
             },
         }
     }
 
     /// Add hover text to the given byte range.
     pub fn hover_text(&mut self, range: Range<usize>, text: impl Into<String>) {
-        self.hovers.push(api::Hover {
+        self.hovers.push(Hover {
             start: range.start,
             end: range.end,
             text: text.into(),
@@ -124,6 +127,23 @@ impl Text {
 impl Drop for Text {
     fn drop(&mut self) {
         send_command(self.json());
+    }
+}
+
+#[derive(Debug, Clone)]
+struct Hover {
+    start: usize,
+    end: usize,
+    text: String,
+}
+
+impl From<Hover> for JsonValue {
+    fn from(hover: Hover) -> Self {
+        json::object! {
+            start: hover.start,
+            end: hover.end,
+            text: hover.text,
+        }
     }
 }
 
@@ -173,8 +193,8 @@ pub struct Tree {
     command_index: usize,
     pane_name: String,
     kind: TreeKind,
-    roots: Vec<api::Tree>,
-    stack: Vec<api::Tree>,
+    roots: Vec<TreeNode>,
+    stack: Vec<TreeNode>,
 }
 
 impl Tree {
@@ -188,18 +208,22 @@ impl Tree {
         }
     }
 
-    fn json(&mut self) -> api::Command {
+    fn json(&mut self) -> JsonValue {
         // Implicitly close tree
         while !self.stack.is_empty() {
             self.end_node();
         }
-        api::Command {
+        let pane_type = match self.kind {
+            TreeKind::Tree => "tree",
+            TreeKind::TextTree => "text_tree",
+        };
+        json::object! {
             index: self.command_index,
-            pane: api::Pane {
+            pane: {
                 name: self.pane_name.clone(),
-                content: match self.kind {
-                    TreeKind::Tree => api::PaneContent::Tree(self.roots.clone()),
-                    TreeKind::TextTree => api::PaneContent::TextTree(self.roots.clone()),
+                content: {
+                    type: pane_type,
+                    data: self.roots.clone(),
                 },
             },
         }
@@ -210,7 +234,7 @@ impl Tree {
     /// A call to this function should be paired with a call to [`end_node`](Self::end_node).
     /// Between these two calls, the node and its children should be built.
     pub fn begin_node(&mut self) {
-        self.stack.push(api::Tree {
+        self.stack.push(TreeNode {
             label: None,
             children: Vec::new(),
         });
@@ -253,6 +277,21 @@ impl Drop for Tree {
     }
 }
 
+#[derive(Debug, Clone)]
+struct TreeNode {
+    label: Option<String>,
+    children: Vec<TreeNode>,
+}
+
+impl From<TreeNode> for JsonValue {
+    fn from(node: TreeNode) -> Self {
+        json::object! {
+            label: node.label,
+            children: node.children,
+        }
+    }
+}
+
 /// A directed graph. Returns [`Graph`](Graph).
 ///
 /// See [crate level documentation](crate) for an explanation of `pane_name`.
@@ -276,8 +315,8 @@ pub fn graph(pane_name: impl Into<String>) -> Graph {
 pub struct Graph {
     command_index: usize,
     pane_name: String,
-    nodes: Vec<api::GraphNode>,
-    edges: Vec<api::GraphEdge>,
+    nodes: Vec<GraphNode>,
+    edges: Vec<GraphEdge>,
 }
 
 impl Graph {
@@ -290,22 +329,25 @@ impl Graph {
         }
     }
 
-    fn json(&self) -> api::Command {
-        api::Command {
+    fn json(&self) -> JsonValue {
+        json::object! {
             index: self.command_index,
-            pane: api::Pane {
+            pane: {
                 name: self.pane_name.clone(),
-                content: api::PaneContent::Graph(vec![api::Graph {
-                    nodes: self.nodes.clone(),
-                    edges: self.edges.clone(),
-                }]),
+                content: {
+                    type: "graph",
+                    data: [{
+                        nodes: self.nodes.clone(),
+                        edges: self.edges.clone(),
+                    }],
+                }
             },
         }
     }
 
     /// Add a node with the given id. The node's label equals its id.
     pub fn node(&mut self, id: impl Into<String>) {
-        self.nodes.push(api::GraphNode {
+        self.nodes.push(GraphNode {
             id: id.into(),
             label: None,
         });
@@ -313,7 +355,7 @@ impl Graph {
 
     /// Add a node with the given id and label.
     pub fn node_labeled(&mut self, id: impl Into<String>, label: impl Into<String>) {
-        self.nodes.push(api::GraphNode {
+        self.nodes.push(GraphNode {
             id: id.into(),
             label: Some(label.into()),
         });
@@ -329,7 +371,7 @@ impl Graph {
     /// This will hopefully change in the future, but for now you should label all edges if their
     /// order matters.
     pub fn edge(&mut self, from_id: impl Into<String>, to_id: impl Into<String>) {
-        self.edges.push(api::GraphEdge {
+        self.edges.push(GraphEdge {
             from_id: from_id.into(),
             to_id: to_id.into(),
             label: None,
@@ -344,7 +386,7 @@ impl Graph {
         to_id: impl Into<String>,
         label: impl Into<String>,
     ) {
-        self.edges.push(api::GraphEdge {
+        self.edges.push(GraphEdge {
             from_id: from_id.into(),
             to_id: to_id.into(),
             label: Some(label.into()),
@@ -355,5 +397,37 @@ impl Graph {
 impl Drop for Graph {
     fn drop(&mut self) {
         send_command(self.json());
+    }
+}
+
+#[derive(Debug, Clone)]
+struct GraphNode {
+    id: String,
+    label: Option<String>,
+}
+
+impl From<GraphNode> for JsonValue {
+    fn from(node: GraphNode) -> Self {
+        json::object! {
+            id: node.id,
+            label: node.label,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct GraphEdge {
+    from_id: String,
+    to_id: String,
+    label: Option<String>,
+}
+
+impl From<GraphEdge> for JsonValue {
+    fn from(edge: GraphEdge) -> Self {
+        json::object! {
+            fromId: edge.from_id,
+            toId: edge.to_id,
+            label: edge.label,
+        }
     }
 }
