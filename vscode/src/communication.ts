@@ -1,4 +1,5 @@
 import { spawn } from "child_process";
+import { env as process_env } from "process";
 import * as api from "./api";
 import treeKill from "tree-kill";
 
@@ -55,7 +56,7 @@ function runCommand(
   const process = spawn(command, {
     cwd: workingDir,
     shell: true,
-    env,
+    env: { ...process_env, ...env },
   });
 
   let canceled = false;
